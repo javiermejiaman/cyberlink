@@ -1,0 +1,138 @@
+/* setup */
+* {
+  margin: 0px;
+  padding: 0px;
+  color: #333338;
+  font-family: arial, sans-serif-light, sans-serif;
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  position: relative;
+}
+
+#menu {
+  position: absolute;
+  top: 0px;
+  padding: 0px 25px;
+  width: 300px;
+}
+
+#logo {
+  width: 100px;
+}
+
+/* components */
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3f3f47;
+}
+
+#tracing-table {
+  width: 300px;
+}
+
+#tracing-table th, #tracing-table td {
+  height: 20px;
+  text-align: center;
+}
+
+#tracing-table td {
+  font-family: monospace;
+}
+
+#tracing-table .shrink {
+  width: 1px;
+  white-space:nowrap
+}
+
+/* controls */
+
+.training-set {
+  display: inline;
+  padding: 0px 10px;
+  font-size: 14px;
+}
+
+.training-set:first-child {
+  padding-left: 0px;
+}
+
+.training-set.active {
+  font-weight: 700;
+}
+
+#play {
+  display: inline-block;
+  border-radius: 2px;
+  padding: 12px 50px;
+  background-color: #0784de;
+  text-align: center;
+  transition: all 0.25s;
+}
+
+#play > span {
+  font-weight: 700;
+  color: white;
+}
+
+#play:hover {
+  transition: all 0.25s;
+  background-color: #0991e0;
+}
+
+#play.active {
+  transition: all 0.25s;
+  background-color: #ffb04f;
+}
+
+#play.active:hover {
+  transition: all 0.25s;
+  background-color: #ffbf59;
+}
+
+/* colors */
+.input {
+  color: #0784de;
+}
+
+.target, .warning {
+  color: #ffb04f;
+}
+
+.prediction, .ok {
+  color: #168c81;
+}
+
+.error {
+  color: #e8302a;
+}
+
+/* spacing */
+.mt-lg {
+  margin-top: 50px;
+}
+
+.mt-md {
+  margin-top: 25px;
+}
+
+.mt-sm {
+  margin-top: 10px;
+}
+
+/* utility */
+.bold {
+  font-weight: 600;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.no-user-select {
+  user-select: none;
+}

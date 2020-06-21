@@ -1,0 +1,97 @@
+<html>
+  <head>
+    <title>CyberLink - Red neuronal</title>
+    <script type="module" src="/js/index.js"></script>
+    <script type="module" src="/js/cyberlink.js"></script>
+    <script type="module" src="/js/graphics.js"></script>
+    <link rel="stylesheet" type="text/css" href="/css/index.css">
+  </head>
+  <body>
+    <section id="app">
+      <canvas id="canvas"></canvas>
+      <aside id="menu">
+        <img id="logo" class="mt-md no-user-select" src="/img/logo.png">
+        <div id="trainings" class="mt-lg">
+          <label class="title">Entrenamiento</label>
+          <div class="mt-sm">
+            <span id="or" class="training-set clickable no-user-select active">OR</span>
+            <span id="xor" class="training-set clickable no-user-select">XOR</span>
+            <span id="and" class="training-set clickable no-user-select">AND</span>
+            <span id="nand" class="training-set clickable no-user-select">NAND</span>
+          </div>
+        </div>
+        <div class="mt-lg">
+          <label class="title">Seguimiento</label>
+          <table id="tracing-table" class="mt-sm">
+            <thead>
+              <tr>
+                <th class="shrink"><label class="input">Entrada 1</label></th>
+                <th></th><!--fill-->
+                <th class="shrink"><label class="input">Entrada 2</label></th>
+                <th></th><!--fill-->
+                <th class="shrink"><label class="target">Objetivo</label></th>
+                <th></th><!--fill-->
+                <th class="shrink"><label class="prediction">Predicción</label></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="r0c0">0</td>
+                <td></td><!--fill-->
+                <td id="r0c1">0</td>
+                <td></td><!--fill-->
+                <td id="r0c2">0</td>
+                <td></td><!--fill-->
+                <td id="r0c3" class="bold">0</td>
+              </tr>
+              <tr>
+                <td id="r1c0">1</td>
+                <td></td><!--fill-->
+                <td id="r1c1">0</td>
+                <td></td><!--fill-->
+                <td id="r1c2">1</td>
+                <td></td><!--fill-->
+                <td id="r1c3" class="bold">0</td>
+              </tr>
+              <tr>
+                <td id="r2c0">0</td>
+                <td></td><!--fill-->
+                <td id="r2c1">1</td>
+                <td></td><!--fill-->
+                <td id="r2c2">1</td>
+                <td></td><!--fill-->
+                <td id="r2c3" class="bold">0</td>
+              </tr>
+              <tr>
+                <td id="r3c0">1</td>
+                <td></td><!--fill-->
+                <td id="r3c1">1</td>
+                <td></td><!--fill-->
+                <td id="r3c2">1</td>
+                <td></td><!--fill-->
+                <td id="r3c3" class="bold">0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-lg">
+          <label class="title">Estado</label>
+          <canvas id="sparkline" class="mt-sm" width="300" height="50"></canvas>
+          <div class="mt-sm">
+            <label>Error promedio: <span id="average-error">0</span></label>
+            <br>
+            <label>Época: <span id="epoch">0</span></label>
+          </div>
+        </div>
+        <div class="mt-lg">
+          <div id="play" class="no-user-select clickable">
+            <span>Iniciar</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+    <section id="notebook">
+      
+    </section>
+  </body>
+</html>
