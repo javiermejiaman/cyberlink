@@ -5,6 +5,7 @@ export class CyberLink {
 
   // neural network
   private mWeights: number[];
+  private mBiases: number[];
   private mNeurons: number[];
   private mLReLUFactor: number;
   private mTrainingSet: number[][];
@@ -22,13 +23,18 @@ export class CyberLink {
     this.mEpoch = 0;
     this.mIsRunning = false
 
-    this.mWeights = new Array(9);
-    for(let i = 0; i < 9; i++) {
+    this.mWeights = new Array(12);
+    for(let i = 0; i < 12; i++) {
       this.mWeights[i] = Math.random();
     }
 
-    this.mNeurons = new Array(6);
-    for(let i = 0; i < 6; i++) {
+    this.mBiases = new Array(5);
+    for(let i = 0; i < 5; i++) {
+      this.mBiases[i] = Math.random();
+    }
+
+    this.mNeurons = new Array(7);
+    for(let i = 0; i < 7; i++) {
       this.mNeurons[i] = 0;
     }
 
@@ -70,7 +76,7 @@ export class CyberLink {
   }
 
   getError() {
-    return this.squaredError(this.mTrainingSet[this.mCurrent][2], this.mNeurons[5]);
+    return this.squaredError(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]);
   }
 
   getLReLUFactor() {
@@ -87,9 +93,15 @@ export class CyberLink {
 
   setTrainingSet(trainingSet: number[][]) {
     this.mTrainingSet = trainingSet;
-    for(let i = 0; i < 9; i++) {
+
+    for(let i = 0; i < 12; i++) {
       this.mWeights[i] = Math.random();
     }
+
+    for(let i = 0; i < 5; i++) {
+      this.mBiases[i] = Math.random();
+    }
+
     this.mCurrent = 0;
     this.mEpoch = 0;
   }
@@ -127,26 +139,30 @@ export class CyberLink {
     this.mNeurons[0] = this.mTrainingSet[this.mCurrent][0];
     this.mNeurons[1] = this.mTrainingSet[this.mCurrent][1];
 
-    this.mNeurons[2] = this.sigmoid(this.mNeurons[0] * this.mWeights[0] + this.mNeurons[1] * this.mWeights[3]);
-    this.mNeurons[3] = this.sigmoid(this.mNeurons[0] * this.mWeights[1] + this.mNeurons[1] * this.mWeights[4]);
-    this.mNeurons[4] = this.sigmoid(this.mNeurons[0] * this.mWeights[2] + this.mNeurons[1] * this.mWeights[5]);
+    this.mNeurons[2] = this.sigmoid(this.mNeurons[0] * this.mWeights[0] + this.mNeurons[1] * this.mWeights[4] + this.mBiases[0]);
+    this.mNeurons[3] = this.sigmoid(this.mNeurons[0] * this.mWeights[1] + this.mNeurons[1] * this.mWeights[5] + this.mBiases[1]);
+    this.mNeurons[4] = this.sigmoid(this.mNeurons[0] * this.mWeights[2] + this.mNeurons[1] * this.mWeights[6] + this.mBiases[2]);
+    this.mNeurons[5] = this.sigmoid(this.mNeurons[0] * this.mWeights[3] + this.mNeurons[1] * this.mWeights[7] + this.mBiases[3]);
 
-    this.mNeurons[5] = this.sigmoid(this.mNeurons[2] * this.mWeights[6] + this.mNeurons[3] * this.mWeights[7] + this.mNeurons[4] * this.mWeights[8]);
+    this.mNeurons[6] = this.sigmoid(this.mNeurons[2] * this.mWeights[8] + this.mNeurons[3] * this.mWeights[9] + this.mNeurons[4] * this.mWeights[10] + this.mNeurons[5] * this.mWeights[11] + this.mBiases[4]);
   }
 
   private backPropagation() {
     // update weights
-    this.mWeights[0] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[5]) * this.sigmoidPrime(this.mNeurons[5]) * this.mWeights[6] * this.sigmoidPrime(this.mNeurons[2]) * this.mNeurons[0];
-    this.mWeights[1] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[5]) * this.sigmoidPrime(this.mNeurons[5]) * this.mWeights[7] * this.sigmoidPrime(this.mNeurons[3]) * this.mNeurons[0];
-    this.mWeights[2] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[5]) * this.sigmoidPrime(this.mNeurons[5]) * this.mWeights[8] * this.sigmoidPrime(this.mNeurons[4]) * this.mNeurons[0];
+    this.mWeights[0] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mWeights[8] * this.sigmoidPrime(this.mNeurons[2]) * this.mNeurons[0];
+    this.mWeights[1] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mWeights[9] * this.sigmoidPrime(this.mNeurons[3]) * this.mNeurons[0];
+    this.mWeights[2] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mWeights[10] * this.sigmoidPrime(this.mNeurons[4]) * this.mNeurons[0];
+    this.mWeights[3] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mWeights[11] * this.sigmoidPrime(this.mNeurons[5]) * this.mNeurons[0];
 
-    this.mWeights[3] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[5]) * this.sigmoidPrime(this.mNeurons[5]) * this.mWeights[6] * this.sigmoidPrime(this.mNeurons[2]) * this.mNeurons[1];
-    this.mWeights[4] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[5]) * this.sigmoidPrime(this.mNeurons[5]) * this.mWeights[7] * this.sigmoidPrime(this.mNeurons[3]) * this.mNeurons[1];
-    this.mWeights[5] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[5]) * this.sigmoidPrime(this.mNeurons[5]) * this.mWeights[8] * this.sigmoidPrime(this.mNeurons[4]) * this.mNeurons[1];
+    this.mWeights[4] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mWeights[8] * this.sigmoidPrime(this.mNeurons[2]) * this.mNeurons[1];
+    this.mWeights[5] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mWeights[9] * this.sigmoidPrime(this.mNeurons[3]) * this.mNeurons[1];
+    this.mWeights[6] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mWeights[10] * this.sigmoidPrime(this.mNeurons[4]) * this.mNeurons[1];
+    this.mWeights[7] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mWeights[11] * this.sigmoidPrime(this.mNeurons[5]) * this.mNeurons[1];
 
-    this.mWeights[6] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[5]) * this.sigmoidPrime(this.mNeurons[5]) * this.mNeurons[2];
-    this.mWeights[7] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[5]) * this.sigmoidPrime(this.mNeurons[5]) * this.mNeurons[3];
-    this.mWeights[8] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[5]) * this.sigmoidPrime(this.mNeurons[5]) * this.mNeurons[4];
+    this.mWeights[8] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mNeurons[2];
+    this.mWeights[9] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mNeurons[3];
+    this.mWeights[10] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mNeurons[4];
+    this.mWeights[11] -= this.mLearningRate * this.squaredErrorPrime(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]) * this.sigmoidPrime(this.mNeurons[6]) * this.mNeurons[5];
   }
 
 }

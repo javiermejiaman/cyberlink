@@ -239,41 +239,41 @@ function update() {
   app.next();
 
   let neurons = app.getNeurons();
-  tracingTable[current][3].innerHTML = neurons[5].toFixed(2);
+  tracingTable[current][3].innerHTML = neurons[6].toFixed(2);
 
   tracingTable[current][3].className = '';
   switch(activeTrainingSet) {
     case 'OR':
-      if(Math.abs(trainingSets.OR[current][2] - neurons[5]) < 0.1) {
+      if(Math.abs(trainingSets.OR[current][2] - neurons[6]) < 0.1) {
         tracingTable[current][3].classList.add('ok');
-      } else if(Math.abs(trainingSets.OR[current][2] - neurons[5]) < 0.5) {
+      } else if(Math.abs(trainingSets.OR[current][2] - neurons[6]) < 0.5) {
         tracingTable[current][3].classList.add('warning');
       } else {
         tracingTable[current][3].classList.add('error');
       }
     break;
     case 'XOR':
-      if(Math.abs(trainingSets.XOR[current][2] - neurons[5]) < 0.1) {
+      if(Math.abs(trainingSets.XOR[current][2] - neurons[6]) < 0.1) {
         tracingTable[current][3].classList.add('ok');
-      } else if(Math.abs(trainingSets.XOR[current][2] - neurons[5]) < 0.5) {
+      } else if(Math.abs(trainingSets.XOR[current][2] - neurons[6]) < 0.5) {
         tracingTable[current][3].classList.add('warning');
       } else {
         tracingTable[current][3].classList.add('error');
       }
     break;
     case 'AND':
-      if(Math.abs(trainingSets.AND[current][2] - neurons[5]) < 0.1) {
+      if(Math.abs(trainingSets.AND[current][2] - neurons[6]) < 0.1) {
         tracingTable[current][3].classList.add('ok');
-      } else if(Math.abs(trainingSets.AND[current][2] - neurons[5]) < 0.5) {
+      } else if(Math.abs(trainingSets.AND[current][2] - neurons[6]) < 0.5) {
         tracingTable[current][3].classList.add('warning');
       } else {
         tracingTable[current][3].classList.add('error');
       }
     break;
     case 'NAND':
-      if(Math.abs(trainingSets.NAND[current][2] - neurons[5]) < 0.1) {
+      if(Math.abs(trainingSets.NAND[current][2] - neurons[6]) < 0.1) {
         tracingTable[current][3].classList.add('ok');
-      } else if(Math.abs(trainingSets.NAND[current][2] - neurons[5]) < 0.5) {
+      } else if(Math.abs(trainingSets.NAND[current][2] - neurons[6]) < 0.5) {
         tracingTable[current][3].classList.add('warning');
       } else {
         tracingTable[current][3].classList.add('error');
@@ -318,9 +318,10 @@ class App extends CyberLink {
     this.mPoints = [
       new Point(offset + margin, this.mCanvasHeight * 0.33),
       new Point(offset + margin, this.mCanvasHeight * 0.67),
-      new Point(offset + margin + ( this.mCanvasWidth - offset - 2 * margin ) * 0.5, this.mCanvasHeight * 0.25),
-      new Point(offset + margin + ( this.mCanvasWidth - offset - 2 * margin ) * 0.5, this.mCanvasHeight * 0.5),
-      new Point(offset + margin + ( this.mCanvasWidth - offset - 2 * margin ) * 0.5, this.mCanvasHeight * 0.75),
+      new Point(offset + margin + ( this.mCanvasWidth - offset - 2 * margin ) * 0.5, this.mCanvasHeight * 0.20),
+      new Point(offset + margin + ( this.mCanvasWidth - offset - 2 * margin ) * 0.5, this.mCanvasHeight * 0.40),
+      new Point(offset + margin + ( this.mCanvasWidth - offset - 2 * margin ) * 0.5, this.mCanvasHeight * 0.60),
+      new Point(offset + margin + ( this.mCanvasWidth - offset - 2 * margin ) * 0.5, this.mCanvasHeight * 0.80),
       new Point(this.mCanvasWidth - margin, this.mCanvasHeight * 0.5)
     ];
 
@@ -351,7 +352,8 @@ class App extends CyberLink {
       new Circle(this.mContext, style.radius, this.mPoints[2], style.hidden.fill, style.hidden.stroke, style.thickness),
       new Circle(this.mContext, style.radius, this.mPoints[3], style.hidden.fill, style.hidden.stroke, style.thickness),
       new Circle(this.mContext, style.radius, this.mPoints[4], style.hidden.fill, style.hidden.stroke, style.thickness),
-      new Circle(this.mContext, style.radius, this.mPoints[5], style.output.fill, style.output.stroke, style.thickness)
+      new Circle(this.mContext, style.radius, this.mPoints[5], style.hidden.fill, style.hidden.stroke, style.thickness),
+      new Circle(this.mContext, style.radius, this.mPoints[6], style.output.fill, style.output.stroke, style.thickness)
     ];
 
     // links array
@@ -359,12 +361,15 @@ class App extends CyberLink {
       new Link(this.mContext, super.getWeights()[0], this.mPoints[0], this.mPoints[2], style.positive, style.negative),
       new Link(this.mContext, super.getWeights()[1], this.mPoints[0], this.mPoints[3], style.positive, style.negative),
       new Link(this.mContext, super.getWeights()[2], this.mPoints[0], this.mPoints[4], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[3], this.mPoints[1], this.mPoints[2], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[4], this.mPoints[1], this.mPoints[3], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[5], this.mPoints[1], this.mPoints[4], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[6], this.mPoints[2], this.mPoints[5], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[7], this.mPoints[3], this.mPoints[5], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[8], this.mPoints[4], this.mPoints[5], style.positive, style.negative),
+      new Link(this.mContext, super.getWeights()[3], this.mPoints[0], this.mPoints[5], style.positive, style.negative),
+      new Link(this.mContext, super.getWeights()[4], this.mPoints[1], this.mPoints[2], style.positive, style.negative),
+      new Link(this.mContext, super.getWeights()[5], this.mPoints[1], this.mPoints[3], style.positive, style.negative),
+      new Link(this.mContext, super.getWeights()[6], this.mPoints[1], this.mPoints[4], style.positive, style.negative),
+      new Link(this.mContext, super.getWeights()[7], this.mPoints[1], this.mPoints[5], style.positive, style.negative),
+      new Link(this.mContext, super.getWeights()[8], this.mPoints[2], this.mPoints[6], style.positive, style.negative),
+      new Link(this.mContext, super.getWeights()[9], this.mPoints[3], this.mPoints[6], style.positive, style.negative),
+      new Link(this.mContext, super.getWeights()[10], this.mPoints[4], this.mPoints[6], style.positive, style.negative),
+      new Link(this.mContext, super.getWeights()[11], this.mPoints[5], this.mPoints[6], style.positive, style.negative),
     ];
 
     this.animate();
