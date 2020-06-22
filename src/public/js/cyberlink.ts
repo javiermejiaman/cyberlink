@@ -12,6 +12,10 @@ export class CyberLink {
   private mCurrent: number;
   private mEpoch: number;
   private mIsRunning: boolean;
+  private mError: number;
+  private mErrorSum: number;
+  private mIteration: number;
+  private mEpochError: number;
 
   constructor(trainintSet: number[][], learningRate: number, LReLUFactor: number) {
 
@@ -21,7 +25,11 @@ export class CyberLink {
     this.mLearningRate = learningRate;
     this.mLReLUFactor = LReLUFactor;
     this.mEpoch = 0;
-    this.mIsRunning = false
+    this.mIsRunning = false;
+    this.mError = 0
+    this.mErrorSum = 0;
+    this.mIteration = 1;
+    this.mEpochError = 0;
 
     this.mWeights = new Array(12);
     for(let i = 0; i < 12; i++) {
@@ -41,12 +49,9 @@ export class CyberLink {
   }
   
   next() {
-    if(this.mIsRunning) {
-      return;
-    }
-
     this.mIsRunning = true;
     this.forwardPropagation();
+    this.mError = this.squaredError(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]);
     this.backPropagation();
 
     this.mCurrent++;
@@ -54,6 +59,12 @@ export class CyberLink {
     if(this.mCurrent >= this.mTrainingSet.length) {
       this.mCurrent = 0;
       this.mEpoch++;
+      this.mEpochError = this.mErrorSum / this.mIteration;
+      this.mErrorSum = 0;
+      this.mIteration = 0;
+    } else {
+      this.mErrorSum += this.mError;
+      this.mIteration++;
     }
     
     this.mIsRunning = false;
@@ -76,7 +87,11 @@ export class CyberLink {
   }
 
   getError() {
-    return this.squaredError(this.mTrainingSet[this.mCurrent][2], this.mNeurons[6]);
+    return this.mError;
+  }
+
+  getEpochError() {
+    return this.mEpochError;
   }
 
   getLReLUFactor() {

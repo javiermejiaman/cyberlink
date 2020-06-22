@@ -6,17 +6,19 @@ let app: App;
 let canvas: HTMLCanvasElement;
 
 // control listeners
-let ControlOR: HTMLElement;
-let ControlXOR: HTMLElement;
-let ControlAND: HTMLElement;
-let ControlNAND: HTMLElement;
-let ControlPlay: HTMLElement;
+let buttons: {
+  OR: HTMLElement,
+  XOR: HTMLElement,
+  AND: HTMLElement,
+  NAND: HTMLElement,
+  PLAY: HTMLElement
+};
 
 // tracing table
 let tracingTable: HTMLElement[][];
 
 // report
-let sparkline: HTMLElement;
+let sparkline: HTMLCanvasElement;
 let averageError: HTMLElement;
 let epoch: HTMLElement;
 
@@ -24,7 +26,11 @@ let epoch: HTMLElement;
 let activeTrainingSet = "OR";
 
 let timer: number;
+let sparkLineTimer: number;
 const refreshRate = 4;
+const sparklineRefreshRate = 500;
+
+let play = false;
 
 const trainingSets = {
   OR: [
@@ -60,6 +66,8 @@ function initialize() {
   app = new App(canvas.getContext('2d')!, window.innerWidth, window.innerHeight, trainingSets.OR);
   deployListeners();
 
+  sparkLineTimer = window.setInterval(updateReport, sparklineRefreshRate);
+
 }
 
 function loadDOMElements() {
@@ -68,11 +76,11 @@ function loadDOMElements() {
   canvas = <HTMLCanvasElement> document.getElementById('canvas')!;
 
   // control listeners
-  ControlOR = document.getElementById('or')!;
-  ControlXOR = document.getElementById('xor')!;
-  ControlAND = document.getElementById('and')!;
-  ControlNAND = document.getElementById('nand')!;
-  ControlPlay = document.getElementById('play')!;
+  buttons.OR = document.getElementById('or')!;
+  buttons.XOR = document.getElementById('xor')!;
+  buttons.AND = document.getElementById('and')!;
+  buttons.NAND = document.getElementById('nand')!;
+  buttons.PLAY = document.getElementById('play')!;
 
   // tracing table
   tracingTable = [
@@ -103,7 +111,7 @@ function loadDOMElements() {
   ];
 
   // report
-  sparkline = document.getElementById('sparkline')!;
+  sparkline = <HTMLCanvasElement> document.getElementById('sparkline')!;
   averageError = document.getElementById('average-error')!;
   epoch = document.getElementById('epoch')!;
 
@@ -122,61 +130,63 @@ function resizeCanvas() {
 function deployListeners() {
 
   // change training set to OR
-  ControlOR.addEventListener('click', () => {
+  buttons.OR.addEventListener('click', () => {
     if(activeTrainingSet != 'OR') {
       removeTrainingSetActiveClass();
       activeTrainingSet = 'OR';
       app.setTrainingSet(trainingSets.OR);
-      ControlOR.classList.add('active');
+      buttons.OR.classList.add('active');
       updateTracingTable();
     }
   });
 
   // change training set to XOR
-  ControlXOR.addEventListener('click', () => {
+  buttons.XOR.addEventListener('click', () => {
     if(activeTrainingSet != 'XOR') {
       removeTrainingSetActiveClass();
       activeTrainingSet = 'XOR';
       app.setTrainingSet(trainingSets.XOR);
-      ControlXOR.classList.add('active');
+      buttons.XOR.classList.add('active');
       updateTracingTable();
     }
   });
 
   // change training set to AND
-  ControlAND.addEventListener('click', () => {
+  buttons.AND.addEventListener('click', () => {
     if(activeTrainingSet != 'AND') {
       removeTrainingSetActiveClass();
       activeTrainingSet = 'AND';
       app.setTrainingSet(trainingSets.AND);
-      ControlAND.classList.add('active');
+      buttons.AND.classList.add('active');
       updateTracingTable();
     }
   });
 
   // change training set to NAND
-  ControlNAND.addEventListener('click', () => {
+  buttons.NAND.addEventListener('click', () => {
     if(activeTrainingSet != 'NAND') {
       removeTrainingSetActiveClass();
       activeTrainingSet = 'NAND';
       app.setTrainingSet(trainingSets.NAND);
-      ControlNAND.classList.add('active');
+      buttons.NAND.classList.add('active');
       updateTracingTable();
     }
   });
 
   // change training set to play or pause the app
-  ControlPlay.addEventListener('click', () => {
+  buttons.PLAY.addEventListener('click', () => {
     if(app.isPlaying()) {
-      app.stop();
+      play = false;
       clearInterval(timer);
-      ControlPlay.children[0].innerHTML ='Iniciar';
-      ControlPlay.classList.remove('active');
+      app.stop();
+      buttons.PLAY.children[0].innerHTML ='Iniciar';
+      buttons.PLAY.classList.remove('active');
     } else {
-      app.play();
+      play = true;
       timer = window.setInterval(update, refreshRate);
-      ControlPlay.children[0].innerHTML ='Pausar';
-      ControlPlay.classList.add('active');
+      app.play();
+      buttons.PLAY.children[0].innerHTML ='Pausar';
+      buttons.PLAY.classList.add('active');
     }
   });
 
@@ -185,16 +195,16 @@ function deployListeners() {
 function removeTrainingSetActiveClass() {
   switch(activeTrainingSet) {
     case 'OR':
-      ControlOR.classList.remove('active');
+      buttons.OR.classList.remove('active');
     break;
     case 'XOR':
-      ControlXOR.classList.remove('active');
+      buttons.XOR.classList.remove('active');
     break;
     case 'AND':
-      ControlAND.classList.remove('active');
+      buttons.AND.classList.remove('active');
     break;
     case 'NAND':
-      ControlNAND.classList.remove('active');
+      buttons.NAND.classList.remove('active');
     break;
   }
 }
@@ -233,58 +243,66 @@ function updateTracingTable() {
 }
 
 function update() {
-  let current = app.getCurrent();
-  let currentEpoch = app.getEpoch();
+  if(play && !app.isRunning()) {
+    let current = app.getCurrent();
+    let currentEpoch = app.getEpoch();
 
-  app.next();
+    app.next();
 
-  let neurons = app.getNeurons();
-  tracingTable[current][3].innerHTML = neurons[6].toFixed(2);
+    let neurons = app.getNeurons();
+    tracingTable[current][3].innerHTML = neurons[6].toFixed(2);
 
-  tracingTable[current][3].className = '';
-  switch(activeTrainingSet) {
-    case 'OR':
-      if(Math.abs(trainingSets.OR[current][2] - neurons[6]) < 0.1) {
-        tracingTable[current][3].classList.add('ok');
-      } else if(Math.abs(trainingSets.OR[current][2] - neurons[6]) < 0.5) {
-        tracingTable[current][3].classList.add('warning');
-      } else {
-        tracingTable[current][3].classList.add('error');
-      }
-    break;
-    case 'XOR':
-      if(Math.abs(trainingSets.XOR[current][2] - neurons[6]) < 0.1) {
-        tracingTable[current][3].classList.add('ok');
-      } else if(Math.abs(trainingSets.XOR[current][2] - neurons[6]) < 0.5) {
-        tracingTable[current][3].classList.add('warning');
-      } else {
-        tracingTable[current][3].classList.add('error');
-      }
-    break;
-    case 'AND':
-      if(Math.abs(trainingSets.AND[current][2] - neurons[6]) < 0.1) {
-        tracingTable[current][3].classList.add('ok');
-      } else if(Math.abs(trainingSets.AND[current][2] - neurons[6]) < 0.5) {
-        tracingTable[current][3].classList.add('warning');
-      } else {
-        tracingTable[current][3].classList.add('error');
-      }
-    break;
-    case 'NAND':
-      if(Math.abs(trainingSets.NAND[current][2] - neurons[6]) < 0.1) {
-        tracingTable[current][3].classList.add('ok');
-      } else if(Math.abs(trainingSets.NAND[current][2] - neurons[6]) < 0.5) {
-        tracingTable[current][3].classList.add('warning');
-      } else {
-        tracingTable[current][3].classList.add('error');
-      }
-    break;
-  }
+    tracingTable[current][3].className = '';
+    switch(activeTrainingSet) {
+      case 'OR':
+        if(Math.abs(trainingSets.OR[current][2] - neurons[6]) < 0.1) {
+          tracingTable[current][3].classList.add('ok');
+        } else if(Math.abs(trainingSets.OR[current][2] - neurons[6]) < 0.5) {
+          tracingTable[current][3].classList.add('warning');
+        } else {
+          tracingTable[current][3].classList.add('error');
+        }
+      break;
+      case 'XOR':
+        if(Math.abs(trainingSets.XOR[current][2] - neurons[6]) < 0.1) {
+          tracingTable[current][3].classList.add('ok');
+        } else if(Math.abs(trainingSets.XOR[current][2] - neurons[6]) < 0.5) {
+          tracingTable[current][3].classList.add('warning');
+        } else {
+          tracingTable[current][3].classList.add('error');
+        }
+      break;
+      case 'AND':
+        if(Math.abs(trainingSets.AND[current][2] - neurons[6]) < 0.1) {
+          tracingTable[current][3].classList.add('ok');
+        } else if(Math.abs(trainingSets.AND[current][2] - neurons[6]) < 0.5) {
+          tracingTable[current][3].classList.add('warning');
+        } else {
+          tracingTable[current][3].classList.add('error');
+        }
+      break;
+      case 'NAND':
+        if(Math.abs(trainingSets.NAND[current][2] - neurons[6]) < 0.1) {
+          tracingTable[current][3].classList.add('ok');
+        } else if(Math.abs(trainingSets.NAND[current][2] - neurons[6]) < 0.5) {
+          tracingTable[current][3].classList.add('warning');
+        } else {
+          tracingTable[current][3].classList.add('error');
+        }
+      break;
+    }
 
-  if(currentEpoch % 10 == 0) {
-    epoch.innerHTML = currentEpoch.toString();
+    if(currentEpoch % 10 == 0) {
+      epoch.innerHTML = currentEpoch.toString();
+    }
   }
   
+}
+
+function updateReport() {
+  if(play) {
+    averageError.innerHTML = app.getEpochError().toFixed(5);
+  }
 }
 
 class App extends CyberLink {
