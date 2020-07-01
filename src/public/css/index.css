@@ -136,3 +136,9 @@
 .no-user-select {
   user-select: none;
 }
+
+/* temporal */
+
+#sparkline {
+  display: none;
+}
