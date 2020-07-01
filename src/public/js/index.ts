@@ -1,436 +1,443 @@
-import { CyberLink } from './cyberlink.js';
-import { Point, Circle, Link } from './graphics.js';
+import { CyberLink, TrainingSet, Topology, Network } from './cyberlink.js';
+import { NetworkStyle } from './graphics.js';
 
-let app: App;
+/**
+ * configuration
+ */
 
-let canvas: HTMLCanvasElement;
+let topology: Topology = [2, 4, 4, 1];
 
-// control listeners
-let buttons: {
-  OR: HTMLElement,
-  XOR: HTMLElement,
-  AND: HTMLElement,
-  NAND: HTMLElement,
-  PLAY: HTMLElement
-};
-
-// tracing table
-let tracingTable: HTMLElement[][];
-
-// report
-let sparkline: HTMLCanvasElement;
-let averageError: HTMLElement;
-let epoch: HTMLElement;
-
-// training sets
-let activeTrainingSet = "OR";
-
-let timer: number;
-let sparkLineTimer: number;
-const refreshRate = 4;
-const sparklineRefreshRate = 500;
-
-let play = false;
-
-const trainingSets = {
-  OR: [
-    [0, 0, 0],
-    [1, 0, 1],
-    [0, 1, 1],
-    [1, 1, 1]
-  ],
-  XOR: [
-    [0, 0, 0],
-    [1, 0, 1],
-    [0, 1, 1],
-    [1, 1, 0]
-  ],
-  AND: [
-    [0, 0, 0],
-    [1, 0, 0],
-    [0, 1, 0],
-    [1, 1, 1]
-  ],
-  NAND: [
-    [0, 0, 1],
-    [1, 0, 1],
-    [0, 1, 1],
-    [1, 1, 0]
-  ],
-};
-
-function initialize() {
-
-  loadDOMElements();
-  resizeCanvas();
-  app = new App(canvas.getContext('2d')!, window.innerWidth, window.innerHeight, trainingSets.OR);
-  deployListeners();
-
-  sparkLineTimer = window.setInterval(updateReport, sparklineRefreshRate);
-
-}
-
-function loadDOMElements() {
-  
-  // get canvas
-  canvas = <HTMLCanvasElement> document.getElementById('canvas')!;
-
-  // control listeners
-  buttons.OR = document.getElementById('or')!;
-  buttons.XOR = document.getElementById('xor')!;
-  buttons.AND = document.getElementById('and')!;
-  buttons.NAND = document.getElementById('nand')!;
-  buttons.PLAY = document.getElementById('play')!;
-
-  // tracing table
-  tracingTable = [
-    [
-      document.getElementById('r0c0')!,
-      document.getElementById('r0c1')!,
-      document.getElementById('r0c2')!,
-      document.getElementById('r0c3')!
-    ],
-    [
-      document.getElementById('r1c0')!,
-      document.getElementById('r1c1')!,
-      document.getElementById('r1c2')!,
-      document.getElementById('r1c3')!
-    ],
-    [
-      document.getElementById('r2c0')!,
-      document.getElementById('r2c1')!,
-      document.getElementById('r2c2')!,
-      document.getElementById('r2c3')!
-    ],
-    [
-      document.getElementById('r3c0')!,
-      document.getElementById('r3c1')!,
-      document.getElementById('r3c2')!,
-      document.getElementById('r3c3')!
-    ]
-  ];
-
-  // report
-  sparkline = <HTMLCanvasElement> document.getElementById('sparkline')!;
-  averageError = document.getElementById('average-error')!;
-  epoch = document.getElementById('epoch')!;
-
-}
-
-function resizeCanvas() {
-
-  // resize canvas
-  canvas.style.width = window.innerWidth + 'px';
-  canvas.style.height = window.innerHeight + 'px';
-  canvas.width =  window.innerWidth;
-  canvas.height = window.innerHeight;
-
-}
-
-function deployListeners() {
-
-  // change training set to OR
-  buttons.OR.addEventListener('click', () => {
-    if(activeTrainingSet != 'OR') {
-      removeTrainingSetActiveClass();
-      activeTrainingSet = 'OR';
-      app.setTrainingSet(trainingSets.OR);
-      buttons.OR.classList.add('active');
-      updateTracingTable();
-    }
-  });
-
-  // change training set to XOR
-  buttons.XOR.addEventListener('click', () => {
-    if(activeTrainingSet != 'XOR') {
-      removeTrainingSetActiveClass();
-      activeTrainingSet = 'XOR';
-      app.setTrainingSet(trainingSets.XOR);
-      buttons.XOR.classList.add('active');
-      updateTracingTable();
-    }
-  });
-
-  // change training set to AND
-  buttons.AND.addEventListener('click', () => {
-    if(activeTrainingSet != 'AND') {
-      removeTrainingSetActiveClass();
-      activeTrainingSet = 'AND';
-      app.setTrainingSet(trainingSets.AND);
-      buttons.AND.classList.add('active');
-      updateTracingTable();
-    }
-  });
-
-  // change training set to NAND
-  buttons.NAND.addEventListener('click', () => {
-    if(activeTrainingSet != 'NAND') {
-      removeTrainingSetActiveClass();
-      activeTrainingSet = 'NAND';
-      app.setTrainingSet(trainingSets.NAND);
-      buttons.NAND.classList.add('active');
-      updateTracingTable();
-    }
-  });
-
-  // change training set to play or pause the app
-  buttons.PLAY.addEventListener('click', () => {
-    if(app.isPlaying()) {
-      play = false;
-      clearInterval(timer);
-      app.stop();
-      buttons.PLAY.children[0].innerHTML ='Iniciar';
-      buttons.PLAY.classList.remove('active');
-    } else {
-      play = true;
-      timer = window.setInterval(update, refreshRate);
-      app.play();
-      buttons.PLAY.children[0].innerHTML ='Pausar';
-      buttons.PLAY.classList.add('active');
-    }
-  });
-
-}
-
-function removeTrainingSetActiveClass() {
-  switch(activeTrainingSet) {
-    case 'OR':
-      buttons.OR.classList.remove('active');
-    break;
-    case 'XOR':
-      buttons.XOR.classList.remove('active');
-    break;
-    case 'AND':
-      buttons.AND.classList.remove('active');
-    break;
-    case 'NAND':
-      buttons.NAND.classList.remove('active');
-    break;
-  }
-}
-
-function updateTracingTable() {
-  switch(activeTrainingSet) {
-    case 'OR':
-      for(let i = 0; i < 4; i++) {
-        for(let j = 0; j < 3; j++) {
-          tracingTable[i][j].innerHTML = trainingSets.OR[i][j].toString();
-        }
-      }
-    break;
-    case 'XOR':
-      for(let i = 0; i < 4; i++) {
-        for(let j = 0; j < 3; j++) {
-          tracingTable[i][j].innerHTML = trainingSets.XOR[i][j].toString();
-        }
-      }
-    break;
-    case 'AND':
-      for(let i = 0; i < 4; i++) {
-        for(let j = 0; j < 3; j++) {
-          tracingTable[i][j].innerHTML = trainingSets.AND[i][j].toString();
-        }
-      }
-    break;
-    case 'NAND':
-      for(let i = 0; i < 4; i++) {
-        for(let j = 0; j < 3; j++) {
-          tracingTable[i][j].innerHTML = trainingSets.NAND[i][j].toString();
-        }
-      }
-    break;
-  }
-}
-
-function update() {
-  if(play && !app.isRunning()) {
-    let current = app.getCurrent();
-    let currentEpoch = app.getEpoch();
-
-    app.next();
-
-    let neurons = app.getNeurons();
-    tracingTable[current][3].innerHTML = neurons[6].toFixed(2);
-
-    tracingTable[current][3].className = '';
-    switch(activeTrainingSet) {
-      case 'OR':
-        if(Math.abs(trainingSets.OR[current][2] - neurons[6]) < 0.1) {
-          tracingTable[current][3].classList.add('ok');
-        } else if(Math.abs(trainingSets.OR[current][2] - neurons[6]) < 0.5) {
-          tracingTable[current][3].classList.add('warning');
-        } else {
-          tracingTable[current][3].classList.add('error');
-        }
-      break;
-      case 'XOR':
-        if(Math.abs(trainingSets.XOR[current][2] - neurons[6]) < 0.1) {
-          tracingTable[current][3].classList.add('ok');
-        } else if(Math.abs(trainingSets.XOR[current][2] - neurons[6]) < 0.5) {
-          tracingTable[current][3].classList.add('warning');
-        } else {
-          tracingTable[current][3].classList.add('error');
-        }
-      break;
-      case 'AND':
-        if(Math.abs(trainingSets.AND[current][2] - neurons[6]) < 0.1) {
-          tracingTable[current][3].classList.add('ok');
-        } else if(Math.abs(trainingSets.AND[current][2] - neurons[6]) < 0.5) {
-          tracingTable[current][3].classList.add('warning');
-        } else {
-          tracingTable[current][3].classList.add('error');
-        }
-      break;
-      case 'NAND':
-        if(Math.abs(trainingSets.NAND[current][2] - neurons[6]) < 0.1) {
-          tracingTable[current][3].classList.add('ok');
-        } else if(Math.abs(trainingSets.NAND[current][2] - neurons[6]) < 0.5) {
-          tracingTable[current][3].classList.add('warning');
-        } else {
-          tracingTable[current][3].classList.add('error');
-        }
-      break;
-    }
-
-    if(currentEpoch % 10 == 0) {
-      epoch.innerHTML = currentEpoch.toString();
-    }
-  }
-  
-}
-
-function updateReport() {
-  if(play) {
-    averageError.innerHTML = app.getEpochError().toFixed(5);
-  }
-}
-
-class App extends CyberLink {
-
-  // canvas
-  private mContext: CanvasRenderingContext2D;
-  private mCanvasWidth: number;
-  private mCanvasHeight: number;
-
-  // graphics
-  private mPoints: Point[];
-  private mCircles: Circle[];
-  private mLinks: Link[];
-  private mAnimate = false;
-
-  constructor(ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number, trainingSet: number[][], learningRate: number = 0.5, LReLUFactor: number = 0.01) {
-    super(trainingSet, learningRate, LReLUFactor);
-
-    // save canvas context
-    this.mContext = ctx;
-
-    // save canvas size
-    this.mCanvasWidth = canvasWidth;
-    this.mCanvasHeight = canvasHeight;
-    
-    // menu offset and neural network margin
-    const offset = 350;
-    const margin = ( this.mCanvasWidth * this.mCanvasWidth ) / ( 9 * this.mCanvasHeight );
-
-    // location of neurons and links
-    this.mPoints = [
-      new Point(offset + margin, this.mCanvasHeight * 0.33),
-      new Point(offset + margin, this.mCanvasHeight * 0.67),
-      new Point(offset + margin + ( this.mCanvasWidth - offset - 2 * margin ) * 0.5, this.mCanvasHeight * 0.20),
-      new Point(offset + margin + ( this.mCanvasWidth - offset - 2 * margin ) * 0.5, this.mCanvasHeight * 0.40),
-      new Point(offset + margin + ( this.mCanvasWidth - offset - 2 * margin ) * 0.5, this.mCanvasHeight * 0.60),
-      new Point(offset + margin + ( this.mCanvasWidth - offset - 2 * margin ) * 0.5, this.mCanvasHeight * 0.80),
-      new Point(this.mCanvasWidth - margin, this.mCanvasHeight * 0.5)
-    ];
-
-    // neural network style
-    const style = {
-      radius: 50,
-      thickness: 8,
+let networkStyle: NetworkStyle = {
+  links: {
+    width: 15,
+    fill: {
       positive: '#363645',
-      negative: '#b7b7c9',
-      input: {
-        fill: '#0a99ff',
-        stroke: '#2b2b30',
-      },
-      hidden: {
-        fill: '#fcd55c',
-        stroke: '#2b2b30',
-      },
-      output: {
-        fill: '#3caea3',
-        stroke: '#2b2b30',
-      }
-    };
+      negative: '#b7b7c9'
+    }
+  },
+  neurons: {
+    input: {
+      radius: 50,
+      outlineWidth: 8,
+      fill: '#0a99ff',
+      outline: '#2b2b30'
+    },
+    hidden: {
+      radius: 50,
+      outlineWidth: 8,
+      fill: '#fcd55c',
+      outline: '#2b2b30'
+    },
+    output: {
+      radius: 50,
+      outlineWidth: 8,
+      fill: '#3caea3',
+      outline: '#2b2b30'
+    }
+  },
+  margin: {
+    top: 0,
+    right: 25 + ( window.innerWidth * window.innerWidth ) / ( ( topology.length - 2 ) * 9 * window.innerHeight ),
+    bottom: 0,
+    left: 350 + ( window.innerWidth * window.innerWidth ) / ( ( topology.length - 2 ) * 9 * window.innerHeight )
+  }
+}
 
-    // neurons array
-    this.mCircles = [
-      new Circle(this.mContext, style.radius, this.mPoints[0], style.input.fill, style.input.stroke, style.thickness),
-      new Circle(this.mContext, style.radius, this.mPoints[1], style.input.fill, style.input.stroke, style.thickness),
-      new Circle(this.mContext, style.radius, this.mPoints[2], style.hidden.fill, style.hidden.stroke, style.thickness),
-      new Circle(this.mContext, style.radius, this.mPoints[3], style.hidden.fill, style.hidden.stroke, style.thickness),
-      new Circle(this.mContext, style.radius, this.mPoints[4], style.hidden.fill, style.hidden.stroke, style.thickness),
-      new Circle(this.mContext, style.radius, this.mPoints[5], style.hidden.fill, style.hidden.stroke, style.thickness),
-      new Circle(this.mContext, style.radius, this.mPoints[6], style.output.fill, style.output.stroke, style.thickness)
-    ];
+const learningRate = 0.5
 
-    // links array
-    this.mLinks = [
-      new Link(this.mContext, super.getWeights()[0], this.mPoints[0], this.mPoints[2], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[1], this.mPoints[0], this.mPoints[3], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[2], this.mPoints[0], this.mPoints[4], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[3], this.mPoints[0], this.mPoints[5], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[4], this.mPoints[1], this.mPoints[2], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[5], this.mPoints[1], this.mPoints[3], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[6], this.mPoints[1], this.mPoints[4], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[7], this.mPoints[1], this.mPoints[5], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[8], this.mPoints[2], this.mPoints[6], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[9], this.mPoints[3], this.mPoints[6], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[10], this.mPoints[4], this.mPoints[6], style.positive, style.negative),
-      new Link(this.mContext, super.getWeights()[11], this.mPoints[5], this.mPoints[6], style.positive, style.negative),
-    ];
+const trainingSets = [
+  [
+    {
+      input: [0, 0],
+      expected: [0]
+    },
+    {
+      input: [1, 0],
+      expected: [1]
+    },
+    {
+      input: [0, 1],
+      expected: [1]
+    },
+    {
+      input: [1, 1],
+      expected: [1]
+    }
+  ],
+  [
+    {
+      input: [0, 0],
+      expected: [0]
+    },
+    {
+      input: [1, 0],
+      expected: [1]
+    },
+    {
+      input: [0, 1],
+      expected: [1]
+    },
+    {
+      input: [1, 1],
+      expected: [0]
+    }
+  ],
+  [
+    {
+      input: [0, 0],
+      expected: [0]
+    },
+    {
+      input: [1, 0],
+      expected: [0]
+    },
+    {
+      input: [0, 1],
+      expected: [0]
+    },
+    {
+      input: [1, 1],
+      expected: [1]
+    }
+  ],
+  [
+    {
+      input: [0, 0],
+      expected: [1]
+    },
+    {
+      input: [1, 0],
+      expected: [1]
+    },
+    {
+      input: [0, 1],
+      expected: [1]
+    },
+    {
+      input: [1, 1],
+      expected: [0]
+    }
+  ]
+];
 
-    this.animate();
+class App {
 
+  // app control
+  private mPlay = false;
+
+  // app logic
+  private mCyberLink: CyberLink;
+
+  // HTML elements
+  private canvas: HTMLCanvasElement;
+  private buttons: {
+    OR: HTMLElement,
+    XOR: HTMLElement,
+    AND: HTMLElement,
+    NAND: HTMLElement,
+    SIGMOID: HTMLElement,
+    LRELU: HTMLElement,
+    PLAY: HTMLElement
+  };
+  private tracingTable: HTMLElement[][];
+  private report: {
+    sparkline: HTMLCanvasElement,
+    error: HTMLElement,
+    epoch: HTMLElement
   }
 
-  private animate() {
-    
-    // clear canvas
-    this.mContext.clearRect(0, 0, this.mCanvasWidth, this.mCanvasHeight);
+  private updateRate = {
+    canvas: 4,
+    report: 500
+  }
 
-    // draw links
-    for(let i = this.mLinks.length - 1; i >= 0; i--) {
-      this.mLinks[i].setWeight(super.getWeights()[i]);
-      this.mLinks[i].recalculate();
-      this.mLinks[i].draw();
+  private currentTraining = 0;
+  private trainingSets: TrainingSet[];
+
+  private currentActivation = 0;
+
+  constructor(topology: Topology, style: NetworkStyle, learningRate: number, trainingSets: TrainingSet[]) {
+
+    // get canvas
+    this.canvas = <HTMLCanvasElement> document.getElementById('canvas')!;
+    let context = this.canvas.getContext('2d')!;
+
+    // control listeners
+    this.buttons = {
+      OR: document.getElementById('or')!,
+      XOR: document.getElementById('xor')!,
+      AND: document.getElementById('and')!,
+      NAND: document.getElementById('nand')!,
+      SIGMOID: document.getElementById('sigmoid')!,
+      LRELU: document.getElementById('lrelu')!,
+      PLAY: document.getElementById('play')!
     }
 
-    // draw neurons
-    this.mCircles.forEach((circle) => {
-      circle.draw();
-    });
+    // tracing table
+    this.tracingTable = [
+      [
+        document.getElementById('r0c0')!,
+        document.getElementById('r0c1')!,
+        document.getElementById('r0c2')!,
+        document.getElementById('r0c3')!
+      ],
+      [
+        document.getElementById('r1c0')!,
+        document.getElementById('r1c1')!,
+        document.getElementById('r1c2')!,
+        document.getElementById('r1c3')!
+      ],
+      [
+        document.getElementById('r2c0')!,
+        document.getElementById('r2c1')!,
+        document.getElementById('r2c2')!,
+        document.getElementById('r2c3')!
+      ],
+      [
+        document.getElementById('r3c0')!,
+        document.getElementById('r3c1')!,
+        document.getElementById('r3c2')!,
+        document.getElementById('r3c3')!
+      ]
+    ];
 
-    // draw next if animation mode is activated
-    if(this.mAnimate) {
-      requestAnimationFrame(this.animate.bind(this));
+    // report
+    this.report = {
+      sparkline: <HTMLCanvasElement> document.getElementById('sparkline')!,
+      error: document.getElementById('average-error')!,
+      epoch: document.getElementById('epoch')!
     }
+
+    this.resizeCanvas();
+
+    this.mCyberLink = new CyberLink(new Network(context, style, topology), learningRate, trainingSets[0]);
+
+    window.setInterval(() => {this.update()}, this.updateRate.canvas);
+
+    this.deployListeners();
+
+    this.trainingSets = trainingSets;
+
+    this.mCyberLink.draw();
 
   }
 
   play() {
-    this.mAnimate = true;
-    this.animate();
+    this.mPlay = true;
+    this.draw();
   }
 
   stop() {
-    this.mAnimate = false;
+    this.mPlay = false;
   }
 
-  isPlaying() {
-    return this.mAnimate;
+  private update() {
+    if(this.mPlay) {
+      
+      let trainingPointer = this.mCyberLink.getTrainingPointer();
+      let currentEpoch = this.mCyberLink.getEpoch();
+  
+      this.mCyberLink.update();
+  
+      let neurons = this.mCyberLink.getNetwork().getNeuronStructure().getOutputLayer().getNeurons();
+      this.tracingTable[trainingPointer][3].innerHTML = neurons[0].getOutput().toFixed(2);
+  
+      this.tracingTable[trainingPointer][3].className = '';
+  
+      switch(this.currentTraining) {
+        case 0:
+          if(+Math.abs(trainingSets[0][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.1) {
+            this.tracingTable[trainingPointer][3].classList.add('ok');
+          } else if(+Math.abs(trainingSets[0][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.5) {
+            this.tracingTable[trainingPointer][3].classList.add('warning');
+          } else {
+            this.tracingTable[trainingPointer][3].classList.add('error');
+          }
+        break;
+        case 1:
+          if(+Math.abs(trainingSets[1][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.1) {
+            this.tracingTable[trainingPointer][3].classList.add('ok');
+          } else if(+Math.abs(trainingSets[1][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.5) {
+            this.tracingTable[trainingPointer][3].classList.add('warning');
+          } else {
+            this.tracingTable[trainingPointer][3].classList.add('error');
+          }
+        break;
+        case 2:
+          if(+Math.abs(trainingSets[2][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.1) {
+            this.tracingTable[trainingPointer][3].classList.add('ok');
+          } else if(+Math.abs(trainingSets[2][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.5) {
+            this.tracingTable[trainingPointer][3].classList.add('warning');
+          } else {
+            this.tracingTable[trainingPointer][3].classList.add('error');
+          }
+        break;
+        case 3:
+          if(+Math.abs(trainingSets[3][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.1) {
+            this.tracingTable[trainingPointer][3].classList.add('ok');
+          } else if(+Math.abs(trainingSets[3][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.5) {
+            this.tracingTable[trainingPointer][3].classList.add('warning');
+          } else {
+            this.tracingTable[trainingPointer][3].classList.add('error');
+          }
+        break;
+      }
+
+      this.report.error.innerHTML = this.mCyberLink.getError().toFixed(5);
+  
+      if(currentEpoch % 10 == 0) {
+        this.report.epoch.innerHTML = currentEpoch.toString();
+      }
+    }
+  }
+
+  private draw() {
+    if(this.mPlay) {
+      this.mCyberLink.draw();
+      requestAnimationFrame(this.draw.bind(this));
+    }
+  }
+
+  private resizeCanvas() {
+
+    this.canvas.style.width = window.innerWidth + 'px';
+    this.canvas.style.height = window.innerHeight + 'px';
+    this.canvas.width =  window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  
+  }
+
+  private deployListeners() {
+
+    // change training set to OR
+    this.buttons.OR.addEventListener('click', () => {
+      if(this.currentTraining != 0) {
+        this.removeActiveClass();
+        this.currentTraining = 0;
+        this.mCyberLink.setTrainingSet(trainingSets[0]);
+        this.buttons.OR.classList.add('active');
+        this.updateTracingTable();
+      }
+    });
+  
+    // change training set to XOR
+    this.buttons.XOR.addEventListener('click', () => {
+      if(this.currentTraining != 1) {
+        this.removeActiveClass();
+        this.currentTraining = 1;
+        this.mCyberLink.setTrainingSet(trainingSets[1]);
+        this.buttons.XOR.classList.add('active');
+        this.updateTracingTable();
+      }
+    });
+  
+    // change training set to AND
+    this.buttons.AND.addEventListener('click', () => {
+      if(this.currentTraining != 2) {
+        this.removeActiveClass();
+        this.currentTraining = 2;
+        this.mCyberLink.setTrainingSet(trainingSets[2]);
+        this.buttons.AND.classList.add('active');
+        this.updateTracingTable();
+      }
+    });
+  
+    // change training set to NAND
+    this.buttons.NAND.addEventListener('click', () => {
+      if(this.currentTraining != 3) {
+        this.removeActiveClass();
+        this.currentTraining = 3;
+        this.mCyberLink.setTrainingSet(trainingSets[3]);
+        this.buttons.NAND.classList.add('active');
+        this.updateTracingTable();
+      }
+    });
+
+    // change activation function to sigmoid
+    this.buttons.SIGMOID.addEventListener('click', () => {
+      if(this.currentActivation != 0) {
+        this.buttons.LRELU.classList.remove('active');
+        this.currentActivation = 0;
+        this.mCyberLink.setActivation(0);
+        this.buttons.SIGMOID.classList.add('active');
+      }
+    });
+
+    // change activation function to LReLU
+    this.buttons.LRELU.addEventListener('click', () => {
+      if(this.currentActivation != 1) {
+        this.buttons.SIGMOID.classList.remove('active');
+        this.currentActivation = 1;
+        this.mCyberLink.setActivation(1);
+        this.buttons.LRELU.classList.add('active');
+      }
+    });
+  
+    // play or pause the app
+    this.buttons.PLAY.addEventListener('click', () => {
+      if(this.mPlay) {
+        this.stop();
+        this.buttons.PLAY.children[0].innerHTML ='Iniciar';
+        this.buttons.PLAY.classList.remove('active');
+      } else {
+        this.play();
+        this.buttons.PLAY.children[0].innerHTML ='Pausar';
+        this.buttons.PLAY.classList.add('active');
+      }
+    });
+  
+  }
+
+  private updateTracingTable() {
+    switch(this.currentTraining) {
+      case 0:
+        for(let i = 0; i < 4; i++) {
+          this.tracingTable[i][0].innerHTML = this.trainingSets[0][i].input[0].toString();
+          this.tracingTable[i][1].innerHTML = this.trainingSets[0][i].input[1].toString();
+          this.tracingTable[i][2].innerHTML = this.trainingSets[0][i].expected[0].toString();
+        }
+      break;
+      case 1:
+        for(let i = 0; i < 4; i++) {
+          this.tracingTable[i][0].innerHTML = this.trainingSets[1][i].input[0].toString();
+          this.tracingTable[i][1].innerHTML = this.trainingSets[1][i].input[1].toString();
+          this.tracingTable[i][2].innerHTML = this.trainingSets[1][i].expected[0].toString();
+        }
+      break;
+      case 2:
+        for(let i = 0; i < 4; i++) {
+          this.tracingTable[i][0].innerHTML = this.trainingSets[2][i].input[0].toString();
+          this.tracingTable[i][1].innerHTML = this.trainingSets[2][i].input[1].toString();
+          this.tracingTable[i][2].innerHTML = this.trainingSets[2][i].expected[0].toString();
+        }
+      break;
+      case 3:
+        for(let i = 0; i < 4; i++) {
+          this.tracingTable[i][0].innerHTML = this.trainingSets[3][i].input[0].toString();
+          this.tracingTable[i][1].innerHTML = this.trainingSets[3][i].input[1].toString();
+          this.tracingTable[i][2].innerHTML = this.trainingSets[3][i].expected[0].toString();
+        }
+      break;
+    }
+  }
+
+  private removeActiveClass() {
+    switch(this.currentTraining) {
+      case 0:
+        this.buttons.OR.classList.remove('active');
+      break;
+      case 1:
+        this.buttons.XOR.classList.remove('active');
+      break;
+      case 2:
+        this.buttons.AND.classList.remove('active');
+      break;
+      case 3:
+        this.buttons.NAND.classList.remove('active');
+      break;
+    }
   }
 
 }
 
-window.addEventListener('load', () => {initialize()});
+window.addEventListener('load', () => { new App(topology, networkStyle, learningRate, trainingSets) });

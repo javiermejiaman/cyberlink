@@ -1,3 +1,48 @@
+/**
+ * style
+ */
+interface CircleStyle {
+
+  radius: number;
+  outlineWidth: number;
+  fill: string;
+  outline: string;
+
+};
+
+interface LineStyle {
+
+  width: number;
+
+  fill: {
+    positive: string;
+    negative: string;
+  }
+
+};
+
+export interface NetworkStyle {
+
+  links: LineStyle;
+
+  neurons: {
+    input: CircleStyle;
+    hidden: CircleStyle;
+    output: CircleStyle;
+  }
+
+  margin: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  }
+
+}
+
+/**
+ * graphics primitives
+ */
 export class Point {
 
   x: number;
@@ -10,7 +55,7 @@ export class Point {
 
 }
 
-export class Vector2 {
+class Vector2 {
 
   x: number;
   y: number;
@@ -33,25 +78,25 @@ export class Vector2 {
 export class Line {
 
   private mContext: CanvasRenderingContext2D;
-  private mThickness: number;
-  private mStart: Point;
-  private mEnd: Point;
-  private mColor: string;
+  private mWidth: number | undefined;
+  private mStart: Point | undefined;
+  private mEnd: Point | undefined;
+  private mFill: string | undefined;
 
-  constructor(ctx: CanvasRenderingContext2D, thickness: number, start: Point, end: Point, color: string = 'black') {
-    this.mContext = ctx;
-    this.mThickness = thickness;
+  constructor(context: CanvasRenderingContext2D, start?: Point, end?: Point, width?: number, fill?: string) {
+    this.mContext = context;
     this.mStart = start;
     this.mEnd = end;
-    this.mColor = color;
+    this.mWidth = width;
+    this.mFill = fill;
   }
 
-  getThickness() {
-    return this.mThickness;
+  getContext() {
+    return this.mContext;
   }
 
-  setThickness(thickness: number) {
-    this.mThickness = thickness;
+  setContext(context: CanvasRenderingContext2D) {
+    this.mContext = context;
   }
 
   getStart() {
@@ -70,60 +115,12 @@ export class Line {
     this.mEnd = end;
   }
 
-  getColor() {
-    return this.mColor;
+  getWidth() {
+    return this.mWidth;
   }
 
-  setColor(color: string) {
-    this.mColor = color;
-  }
-
-  draw() {
-    const vector = new Vector2(this.mEnd.x - this.mStart.x, this.mEnd.y - this.mStart.y);
-    this.mContext.save();
-    this.mContext.translate(this.mStart.x, this.mStart.y - ( this.mThickness / 2 ));
-    this.mContext.rotate(Math.atan(vector.slope()));
-    this.mContext.beginPath();
-    this.mContext.rect(0, 0, vector.magnitude(), this.mThickness);
-    this.mContext.fillStyle = this.mColor;
-    this.mContext.fill();
-    this.mContext.restore();
-  }
-
-}
-
-export class Circle {
-
-  private mContext: CanvasRenderingContext2D;
-  private mRadius: number;
-  private mLocation: Point;
-  private mFill: string;
-  private mStroke: string;
-  private mThickness: number;
-
-  constructor(ctx: CanvasRenderingContext2D, radius: number, location: Point, fill: string = 'black', stroke: string = 'transparent', thickness: number = 0) {
-    this.mContext = ctx;
-    this.mRadius = radius;
-    this.mLocation = location;
-    this.mFill = fill;
-    this.mStroke = stroke;
-    this.mThickness = thickness;
-  }
-
-  getRadius() {
-    return this.mRadius;
-  }
-
-  setRadius(radius: number) {
-    this.mRadius = radius;
-  }
-
-  getLocation() {
-    return this.mLocation;
-  }
-
-  setLocation(location: Point) {
-    this.mLocation = location;
+  setWidth(width: number) {
+    this.mWidth = width;
   }
 
   getFill() {
@@ -134,94 +131,100 @@ export class Circle {
     this.mFill = fill;
   }
 
-  getStroke() {
-    return this.mStroke;
-  }
-
-  setStroke(stroke: string) {
-    this.mStroke = stroke;
-  }
-
-  getThickness() {
-    return this.mFill;
-  }
-
-  setThickness(thickness: number) {
-    this.mThickness = thickness;
-  }
-
   draw() {
-    this.mContext.beginPath();
-    this.mContext.arc(this.mLocation.x, this.mLocation.y, this.mRadius, 0, 2 * Math.PI);
-    this.mContext.fillStyle = this.mFill;
-    this.mContext.fill();
-    this.mContext.beginPath();
-    this.mContext.arc(this.mLocation.x, this.mLocation.y, this.mRadius, 0, 2 * Math.PI);
-    this.mContext.strokeStyle = this.mStroke;
-    this.mContext.lineWidth = this.mThickness;
-    this.mContext.stroke();
+    if(this.mStart != undefined && this.mEnd != undefined && this.mWidth != undefined && this.mFill != undefined) {
+      const vector = new Vector2(this.mEnd.x - this.mStart.x, this.mEnd.y - this.mStart.y);
+      this.mContext.save();
+      this.mContext.translate(this.mStart.x, this.mStart.y - ( this.mWidth / 2 ));
+      this.mContext.rotate(Math.atan(vector.slope()));
+      this.mContext.beginPath();
+      this.mContext.rect(0, 0, vector.magnitude(), this.mWidth);
+      this.mContext.fillStyle = this.mFill;
+      this.mContext.fill();
+      this.mContext.restore();
+    }
   }
 
 }
 
-export class Link extends Line {
+export class Circle {
 
-  private mPositive: string;
-  private mNegative: string;
-  private mWeight: number;
+  private mContext: CanvasRenderingContext2D;
+  private mLocation: Point | undefined;
+  private mRadius: number | undefined;
+  private mFill: string | undefined;
+  private mOutline: string | undefined;
+  private mOutlineWidth: number | undefined;
 
-  constructor(ctx: CanvasRenderingContext2D, weight: number, start: Point, end: Point, positive: string, negative: string) {
-    super(ctx, 0, start, end);
-    this.mWeight = weight;
-    this.mPositive = positive;
-    this.mNegative = negative;
-    this.recalculate();
+  constructor(context: CanvasRenderingContext2D, location?: Point, radius?: number, fill?: string, outline?: string, outlineWidth?: number) {
+    this.mContext = context;
+    this.mLocation = location;
+    this.mRadius = radius;
+    this.mFill = fill;
+    this.mOutline = outline;
+    this.mOutlineWidth = outlineWidth;
   }
 
-  getWeight() {
-    return this.mWeight;
+  getContext() {
+    return this.mContext;
   }
 
-  setWeight(weight: number) {
-    this.mWeight = weight;
-    this.recalculate();
+  setContext(context: CanvasRenderingContext2D) {
+    this.mContext = context;
   }
 
-  getPositive() {
-    return this.mPositive;
+  getLocation() {
+    return this.mLocation;
   }
 
-  setPositive(positive: string) {
-    this.mPositive = positive;
+  setLocation(location: Point) {
+    this.mLocation = location;
   }
 
-  getNegative() {
-    return this.mNegative;
+  getRadius() {
+    return this.mRadius;
   }
 
-  setNegative(negative: string) {
-    this.mNegative = negative;
+  setRadius(radius: number) {
+    this.mRadius = radius;
   }
 
-  private thickness(weight: number) {
-    if(weight >= 0) {
-      return -14 + ( 30 * Math.exp(weight) ) / ( 1 + Math.exp(weight) );
-    } else {
-      return -14 + ( 30 * Math.exp(-weight) ) / ( 1 + Math.exp(-weight) );
+  getFill() {
+    return this.mFill;
+  }
+
+  setFill(fill: string) {
+    this.mFill = fill;
+  }
+
+  getOutline() {
+    return this.mOutline;
+  }
+
+  setOutline(outline: string) {
+    this.mOutline = outline;
+  }
+
+  getOutlineWidth() {
+    return this.mOutlineWidth;
+  }
+
+  setOutlineWidth(outlineWidth: number) {
+    this.mOutlineWidth = outlineWidth;
+  }
+
+  draw() {
+    if(this.mLocation != undefined && this.mRadius != undefined && this.mFill != undefined && this.mOutline != undefined && this.mOutlineWidth != undefined) {
+      this.mContext.beginPath();
+      this.mContext.arc(this.mLocation.x, this.mLocation.y, this.mRadius, 0, 2 * Math.PI);
+      this.mContext.fillStyle = this.mFill;
+      this.mContext.fill();
+      this.mContext.beginPath();
+      this.mContext.arc(this.mLocation.x, this.mLocation.y, this.mRadius, 0, 2 * Math.PI);
+      this.mContext.strokeStyle = this.mOutline;
+      this.mContext.lineWidth = this.mOutlineWidth;
+      this.mContext.stroke();
     }
-  }
-  
-  private color(weight: number) {
-    if(weight >= 0) {
-      return this.mPositive;
-    } else {
-      return this.mNegative;
-    }
-  }
-
-  recalculate() {
-    super.setThickness(this.thickness(this.mWeight));
-    super.setColor(this.color(this.mWeight));
   }
 
 }

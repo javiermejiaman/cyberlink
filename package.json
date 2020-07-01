@@ -6,7 +6,7 @@
   "scripts": {
     "copy": "copyfiles --up 1 src/views/**/* src/public/css/**/* src/public/img/**/* dist",
     "build": "tsc --project tsconfig.json && tsc --project tsconfig-es.json",
-    "start": "node dist/index.js",
+    "start": "npm run build && npm run copy && node dist/index.js",
     "dev": "nodemon"
   },
   "jest": {
