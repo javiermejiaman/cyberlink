@@ -18,5 +18,10 @@ El objetivo de entrenar una red neuronal es aproximar la salida de la red a la s
 Al seleccionar un conjunto de entrenamiento en el menú, podrá ver que la tabla de seguimiento se actualiza con los datos correspondientes a ese entrenamiento.
 ## Tabla de seguimiento
 La tabla de seguimiento presenta los datos que el sistema está ingresando en la red, la salida que se espera que la red genere y la salida que la red está generando al momento, esta última es permite conocer el estado actual de la red y qué tan lejos o cerca se está de la convergencia.
+## Funciones de activación
+CyberLink cuenta con dos funciones de activación, la función Sigmoide y Leaky-ReLU. Puede aprender sobre estas funciones [aquí](https://en.wikipedia.org/wiki/Activation_function)
 ## Error
 El error de una red neuronal cuantifica la disparidad de la salida esperada con respecto a la salida de la red. Esta información es útil para medir el progreso de la red en su camino a la convergencia.
+## Notas
+1. CyberLink tiene la capacidad de generar topologías de red neuronal a través de un arreglo de topología, si desea modificar la topología del proyecto asegurese de no exceder 4 capas de neuronas ocultas, ya que la carga computacional crece substancialmente.
+1. La función de activación Leaky-ReLU es sensible a muchos parámetros de la red y tiene una mayor probabilidad de quedarse en mínimos locales, se recomiendan por lo menos 2 capas ocultas cuando se trabaje con esta función.
