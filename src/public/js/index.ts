@@ -1,5 +1,5 @@
 import { CyberLink, TrainingSet, Topology } from './cyberlink.js';
-import { NetworkStyle } from './graphics.js';
+import { SparklineStyle, NetworkStyle } from './graphics.js';
 
 /**
  * configuration
@@ -120,6 +120,11 @@ const trainingSets = [
   ]
 ];
 
+let sparklineStyle: SparklineStyle = {
+  fill: '#fff2f3',
+  outline: '#e33630'
+}
+
 class App {
 
   // app control
@@ -158,6 +163,8 @@ class App {
 
   private mErrorHistory: number[] = new Array();
   private mMaxError = 0;
+
+  private mSparklineContext: CanvasRenderingContext2D;
 
   constructor(topology: Topology, style: NetworkStyle, learningRate: number, trainingSets: TrainingSet[]) {
 
@@ -214,6 +221,7 @@ class App {
       error: document.getElementById('average-error')!,
       epoch: document.getElementById('epoch')!
     }
+    this.mSparklineContext = this.mReport.sparkline.getContext('2d')!;
 
     this.resizeCanvas();
 
@@ -458,42 +466,53 @@ class App {
   }
 
   private updateSparkline() {
-    let ctx = this.mReport.sparkline.getContext('2d')!;
-    ctx.clearRect(0, 0, 300, 50);
 
+    // recalculate maximum error in the error history
     for (let i = 0; i < 50; i++) {
       if(this.mErrorHistory[i] > this.mMaxError) {
         this.mMaxError = this.mErrorHistory[i];
       }
     }
 
-    if(this.mMaxError != 0) {
-      ctx.fillStyle = '#f0f0f0';
-      ctx.beginPath();
-      ctx.moveTo(0, Math.abs(50 - 50 * this.mErrorHistory[0] / this.mMaxError));
-      for (let i = 0; i < 50; i++) {
-        ctx.lineTo((i + 1) * 300 / 50, Math.abs(50 - 50 * this.mErrorHistory[i] / this.mMaxError));
-      }
-      ctx.lineTo(300, 50);
-      ctx.lineTo(0, 50);
-      ctx.lineTo(0, Math.abs(50 - 50 * this.mErrorHistory[0] / this.mMaxError));
-      ctx.fill();
+    // clear the sparkline canvas
+    this.mSparklineContext.clearRect(0, 0, 300, 50);
 
-      ctx.strokeStyle = '#e8302a';
-      ctx.beginPath();
-      ctx.moveTo(0, Math.abs(50 - 50 * this.mErrorHistory[0] / this.mMaxError));
+    // verify if max error to avoid division by zero
+    if(this.mMaxError != 0) {
+
+      // set sparkline style
+      this.mSparklineContext.fillStyle = sparklineStyle.fill;
+      this.mSparklineContext.strokeStyle = sparklineStyle.outline;
+
+      // move drawing origin
+      this.mSparklineContext.beginPath();
+      this.mSparklineContext.moveTo(0, Math.abs(50 - 50 * this.mErrorHistory[0] / this.mMaxError));
+      
+      // calculate sparkline based on the error history
       for (let i = 0; i < 50; i++) {
-        ctx.lineTo((i + 1) * 300 / 50, Math.abs(50 - 50 * this.mErrorHistory[i] / this.mMaxError));
+        this.mSparklineContext.lineTo((i + 1) * 300 / 50, Math.abs(50 - 50 * this.mErrorHistory[i] / this.mMaxError));
       }
-      ctx.lineTo(325, Math.abs(50 - 50 * this.mErrorHistory[this.mErrorHistory.length-1] / this.mMaxError));
-      ctx.lineTo(325, 75);
-      ctx.lineTo(-25, 75);
-      ctx.lineTo(-25, Math.abs(50 - 50 * this.mErrorHistory[0] / this.mMaxError));
-      ctx.closePath();
-      ctx.stroke();
+      
+      // close the shape and fill
+      this.mSparklineContext.lineTo(300, 50);
+      this.mSparklineContext.lineTo(0, 50);
+      this.mSparklineContext.lineTo(0, Math.abs(50 - 50 * this.mErrorHistory[0] / this.mMaxError));
+      this.mSparklineContext.fill();
+      
+      // repeat procedure for the outline
+      this.mSparklineContext.beginPath();
+      this.mSparklineContext.moveTo(0, Math.abs(50 - 50 * this.mErrorHistory[0] / this.mMaxError));
+      
+      for (let i = 0; i < 50; i++) {
+        this.mSparklineContext.lineTo((i + 1) * 300 / 50, Math.abs(50 - 50 * this.mErrorHistory[i] / this.mMaxError));
+      }
+      
+      this.mSparklineContext.stroke();
+
     }
   }
 
 }
 
+// launch app
 window.addEventListener('load', () => { new App(topology, networkStyle, learningRate, trainingSets) });

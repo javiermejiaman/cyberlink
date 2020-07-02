@@ -40,6 +40,13 @@ export interface NetworkStyle {
 
 }
 
+export interface SparklineStyle {
+
+  fill: string;
+  outline: string;
+
+}
+
 /**
  * graphics primitives
  */
