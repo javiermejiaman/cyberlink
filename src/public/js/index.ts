@@ -1,4 +1,4 @@
-import { CyberLink, TrainingSet, Topology, Network } from './cyberlink.js';
+import { CyberLink, TrainingSet, Topology } from './cyberlink.js';
 import { NetworkStyle } from './graphics.js';
 
 /**
@@ -129,8 +129,8 @@ class App {
   private mCyberLink: CyberLink;
 
   // HTML elements
-  private canvas: HTMLCanvasElement;
-  private buttons: {
+  private mCanvas: HTMLCanvasElement;
+  private mButtons: {
     OR: HTMLElement,
     XOR: HTMLElement,
     AND: HTMLElement,
@@ -139,31 +139,38 @@ class App {
     LRELU: HTMLElement,
     PLAY: HTMLElement
   };
-  private tracingTable: HTMLElement[][];
-  private report: {
+  private mTracingTable: HTMLElement[][];
+  private mReport: {
     sparkline: HTMLCanvasElement,
     error: HTMLElement,
     epoch: HTMLElement
   }
 
-  private updateRate = {
+  private mUpdateRate = {
     canvas: 4,
     report: 500
   }
 
-  private currentTraining = 0;
-  private trainingSets: TrainingSet[];
+  private mCurrentTraining = 0;
+  private mTrainingSets: TrainingSet[];
 
-  private currentActivation = 0;
+  private mCurrentActivation = 0;
+
+  private mErrorHistory: number[] = new Array();
+  private mMaxError = 0;
 
   constructor(topology: Topology, style: NetworkStyle, learningRate: number, trainingSets: TrainingSet[]) {
 
+    for (let i = 0; i < 50; i++) {
+      this.mErrorHistory[i] = 0;
+    }
+
     // get canvas
-    this.canvas = <HTMLCanvasElement> document.getElementById('canvas')!;
-    let context = this.canvas.getContext('2d')!;
+    this.mCanvas = <HTMLCanvasElement> document.getElementById('canvas')!;
+    let context = this.mCanvas.getContext('2d')!;
 
     // control listeners
-    this.buttons = {
+    this.mButtons = {
       OR: document.getElementById('or')!,
       XOR: document.getElementById('xor')!,
       AND: document.getElementById('and')!,
@@ -174,7 +181,7 @@ class App {
     }
 
     // tracing table
-    this.tracingTable = [
+    this.mTracingTable = [
       [
         document.getElementById('r0c0')!,
         document.getElementById('r0c1')!,
@@ -202,7 +209,7 @@ class App {
     ];
 
     // report
-    this.report = {
+    this.mReport = {
       sparkline: <HTMLCanvasElement> document.getElementById('sparkline')!,
       error: document.getElementById('average-error')!,
       epoch: document.getElementById('epoch')!
@@ -210,13 +217,13 @@ class App {
 
     this.resizeCanvas();
 
-    this.mCyberLink = new CyberLink(new Network(context, style, topology), learningRate, trainingSets[0]);
+    this.mCyberLink = new CyberLink(context, style, topology, learningRate, trainingSets[0]);
 
-    window.setInterval(() => {this.update()}, this.updateRate.canvas);
+    window.setInterval(() => {this.update()}, this.mUpdateRate.canvas);
 
     this.deployListeners();
 
-    this.trainingSets = trainingSets;
+    this.mTrainingSets = trainingSets;
 
     this.mCyberLink.draw();
 
@@ -239,54 +246,60 @@ class App {
   
       this.mCyberLink.update();
   
-      let neurons = this.mCyberLink.getNetwork().getNeuronStructure().getOutputLayer().getNeurons();
-      this.tracingTable[trainingPointer][3].innerHTML = neurons[0].getOutput().toFixed(2);
+      let neurons = this.mCyberLink.getNeuronStructure().getOutputLayer().getNeurons();
+      this.mTracingTable[trainingPointer][3].innerHTML = neurons[0].getOutput().toFixed(2);
   
-      this.tracingTable[trainingPointer][3].className = '';
+      this.mTracingTable[trainingPointer][3].className = '';
   
-      switch(this.currentTraining) {
+      switch(this.mCurrentTraining) {
         case 0:
           if(+Math.abs(trainingSets[0][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.1) {
-            this.tracingTable[trainingPointer][3].classList.add('ok');
+            this.mTracingTable[trainingPointer][3].classList.add('ok');
           } else if(+Math.abs(trainingSets[0][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.5) {
-            this.tracingTable[trainingPointer][3].classList.add('warning');
+            this.mTracingTable[trainingPointer][3].classList.add('warning');
           } else {
-            this.tracingTable[trainingPointer][3].classList.add('error');
+            this.mTracingTable[trainingPointer][3].classList.add('error');
           }
         break;
         case 1:
           if(+Math.abs(trainingSets[1][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.1) {
-            this.tracingTable[trainingPointer][3].classList.add('ok');
+            this.mTracingTable[trainingPointer][3].classList.add('ok');
           } else if(+Math.abs(trainingSets[1][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.5) {
-            this.tracingTable[trainingPointer][3].classList.add('warning');
+            this.mTracingTable[trainingPointer][3].classList.add('warning');
           } else {
-            this.tracingTable[trainingPointer][3].classList.add('error');
+            this.mTracingTable[trainingPointer][3].classList.add('error');
           }
         break;
         case 2:
           if(+Math.abs(trainingSets[2][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.1) {
-            this.tracingTable[trainingPointer][3].classList.add('ok');
+            this.mTracingTable[trainingPointer][3].classList.add('ok');
           } else if(+Math.abs(trainingSets[2][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.5) {
-            this.tracingTable[trainingPointer][3].classList.add('warning');
+            this.mTracingTable[trainingPointer][3].classList.add('warning');
           } else {
-            this.tracingTable[trainingPointer][3].classList.add('error');
+            this.mTracingTable[trainingPointer][3].classList.add('error');
           }
         break;
         case 3:
           if(+Math.abs(trainingSets[3][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.1) {
-            this.tracingTable[trainingPointer][3].classList.add('ok');
+            this.mTracingTable[trainingPointer][3].classList.add('ok');
           } else if(+Math.abs(trainingSets[3][trainingPointer].expected[0] - neurons[0].getOutput()).toFixed(2) <= 0.5) {
-            this.tracingTable[trainingPointer][3].classList.add('warning');
+            this.mTracingTable[trainingPointer][3].classList.add('warning');
           } else {
-            this.tracingTable[trainingPointer][3].classList.add('error');
+            this.mTracingTable[trainingPointer][3].classList.add('error');
           }
         break;
       }
 
-      this.report.error.innerHTML = this.mCyberLink.getError().toFixed(5);
+      if(currentEpoch % 10 == 0) {
+        this.mErrorHistory.shift();
+        this.mErrorHistory.push(this.mCyberLink.getError());
+        this.updateSparkline();
+      }
+
+      this.mReport.error.innerHTML = this.mCyberLink.getError().toFixed(5);
   
       if(currentEpoch % 10 == 0) {
-        this.report.epoch.innerHTML = currentEpoch.toString();
+        this.mReport.epoch.innerHTML = currentEpoch.toString();
       }
     }
   }
@@ -300,141 +313,184 @@ class App {
 
   private resizeCanvas() {
 
-    this.canvas.style.width = window.innerWidth + 'px';
-    this.canvas.style.height = window.innerHeight + 'px';
-    this.canvas.width =  window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    this.mCanvas.style.width = window.innerWidth + 'px';
+    this.mCanvas.style.height = window.innerHeight + 'px';
+    this.mCanvas.width =  window.innerWidth;
+    this.mCanvas.height = window.innerHeight;
   
   }
 
   private deployListeners() {
 
     // change training set to OR
-    this.buttons.OR.addEventListener('click', () => {
-      if(this.currentTraining != 0) {
+    this.mButtons.OR.addEventListener('click', () => {
+      if(this.mCurrentTraining != 0) {
         this.removeActiveClass();
-        this.currentTraining = 0;
+        this.mCurrentTraining = 0;
         this.mCyberLink.setTrainingSet(trainingSets[0]);
-        this.buttons.OR.classList.add('active');
+        this.mButtons.OR.classList.add('active');
         this.updateTracingTable();
+        this.mMaxError = 0;
       }
     });
   
     // change training set to XOR
-    this.buttons.XOR.addEventListener('click', () => {
-      if(this.currentTraining != 1) {
+    this.mButtons.XOR.addEventListener('click', () => {
+      if(this.mCurrentTraining != 1) {
         this.removeActiveClass();
-        this.currentTraining = 1;
+        this.mCurrentTraining = 1;
         this.mCyberLink.setTrainingSet(trainingSets[1]);
-        this.buttons.XOR.classList.add('active');
+        this.mButtons.XOR.classList.add('active');
         this.updateTracingTable();
+        this.mMaxError = 0;
       }
     });
   
     // change training set to AND
-    this.buttons.AND.addEventListener('click', () => {
-      if(this.currentTraining != 2) {
+    this.mButtons.AND.addEventListener('click', () => {
+      if(this.mCurrentTraining != 2) {
         this.removeActiveClass();
-        this.currentTraining = 2;
+        this.mCurrentTraining = 2;
         this.mCyberLink.setTrainingSet(trainingSets[2]);
-        this.buttons.AND.classList.add('active');
+        this.mButtons.AND.classList.add('active');
         this.updateTracingTable();
+        this.mMaxError = 0;
       }
     });
   
     // change training set to NAND
-    this.buttons.NAND.addEventListener('click', () => {
-      if(this.currentTraining != 3) {
+    this.mButtons.NAND.addEventListener('click', () => {
+      if(this.mCurrentTraining != 3) {
         this.removeActiveClass();
-        this.currentTraining = 3;
+        this.mCurrentTraining = 3;
         this.mCyberLink.setTrainingSet(trainingSets[3]);
-        this.buttons.NAND.classList.add('active');
+        this.mButtons.NAND.classList.add('active');
         this.updateTracingTable();
+        this.mMaxError = 0;
       }
     });
 
     // change activation function to sigmoid
-    this.buttons.SIGMOID.addEventListener('click', () => {
-      if(this.currentActivation != 0) {
-        this.buttons.LRELU.classList.remove('active');
-        this.currentActivation = 0;
+    this.mButtons.SIGMOID.addEventListener('click', () => {
+      if(this.mCurrentActivation != 0) {
+        this.mButtons.LRELU.classList.remove('active');
+        this.mCurrentActivation = 0;
         this.mCyberLink.setActivation(0);
-        this.buttons.SIGMOID.classList.add('active');
+        this.mButtons.SIGMOID.classList.add('active');
+        this.mMaxError = 0;
       }
     });
 
     // change activation function to LReLU
-    this.buttons.LRELU.addEventListener('click', () => {
-      if(this.currentActivation != 1) {
-        this.buttons.SIGMOID.classList.remove('active');
-        this.currentActivation = 1;
+    this.mButtons.LRELU.addEventListener('click', () => {
+      if(this.mCurrentActivation != 1) {
+        this.mButtons.SIGMOID.classList.remove('active');
+        this.mCurrentActivation = 1;
         this.mCyberLink.setActivation(1);
-        this.buttons.LRELU.classList.add('active');
+        this.mButtons.LRELU.classList.add('active');
+        this.mMaxError = 0;
       }
     });
   
     // play or pause the app
-    this.buttons.PLAY.addEventListener('click', () => {
+    this.mButtons.PLAY.addEventListener('click', () => {
       if(this.mPlay) {
         this.stop();
-        this.buttons.PLAY.children[0].innerHTML ='Iniciar';
-        this.buttons.PLAY.classList.remove('active');
+        this.mButtons.PLAY.children[0].innerHTML ='Iniciar';
+        this.mButtons.PLAY.classList.remove('active');
       } else {
         this.play();
-        this.buttons.PLAY.children[0].innerHTML ='Pausar';
-        this.buttons.PLAY.classList.add('active');
+        this.mButtons.PLAY.children[0].innerHTML ='Pausar';
+        this.mButtons.PLAY.classList.add('active');
       }
     });
   
   }
 
   private updateTracingTable() {
-    switch(this.currentTraining) {
+    switch(this.mCurrentTraining) {
       case 0:
         for(let i = 0; i < 4; i++) {
-          this.tracingTable[i][0].innerHTML = this.trainingSets[0][i].input[0].toString();
-          this.tracingTable[i][1].innerHTML = this.trainingSets[0][i].input[1].toString();
-          this.tracingTable[i][2].innerHTML = this.trainingSets[0][i].expected[0].toString();
+          this.mTracingTable[i][0].innerHTML = this.mTrainingSets[0][i].input[0].toString();
+          this.mTracingTable[i][1].innerHTML = this.mTrainingSets[0][i].input[1].toString();
+          this.mTracingTable[i][2].innerHTML = this.mTrainingSets[0][i].expected[0].toString();
         }
       break;
       case 1:
         for(let i = 0; i < 4; i++) {
-          this.tracingTable[i][0].innerHTML = this.trainingSets[1][i].input[0].toString();
-          this.tracingTable[i][1].innerHTML = this.trainingSets[1][i].input[1].toString();
-          this.tracingTable[i][2].innerHTML = this.trainingSets[1][i].expected[0].toString();
+          this.mTracingTable[i][0].innerHTML = this.mTrainingSets[1][i].input[0].toString();
+          this.mTracingTable[i][1].innerHTML = this.mTrainingSets[1][i].input[1].toString();
+          this.mTracingTable[i][2].innerHTML = this.mTrainingSets[1][i].expected[0].toString();
         }
       break;
       case 2:
         for(let i = 0; i < 4; i++) {
-          this.tracingTable[i][0].innerHTML = this.trainingSets[2][i].input[0].toString();
-          this.tracingTable[i][1].innerHTML = this.trainingSets[2][i].input[1].toString();
-          this.tracingTable[i][2].innerHTML = this.trainingSets[2][i].expected[0].toString();
+          this.mTracingTable[i][0].innerHTML = this.mTrainingSets[2][i].input[0].toString();
+          this.mTracingTable[i][1].innerHTML = this.mTrainingSets[2][i].input[1].toString();
+          this.mTracingTable[i][2].innerHTML = this.mTrainingSets[2][i].expected[0].toString();
         }
       break;
       case 3:
         for(let i = 0; i < 4; i++) {
-          this.tracingTable[i][0].innerHTML = this.trainingSets[3][i].input[0].toString();
-          this.tracingTable[i][1].innerHTML = this.trainingSets[3][i].input[1].toString();
-          this.tracingTable[i][2].innerHTML = this.trainingSets[3][i].expected[0].toString();
+          this.mTracingTable[i][0].innerHTML = this.mTrainingSets[3][i].input[0].toString();
+          this.mTracingTable[i][1].innerHTML = this.mTrainingSets[3][i].input[1].toString();
+          this.mTracingTable[i][2].innerHTML = this.mTrainingSets[3][i].expected[0].toString();
         }
       break;
     }
   }
 
   private removeActiveClass() {
-    switch(this.currentTraining) {
+    switch(this.mCurrentTraining) {
       case 0:
-        this.buttons.OR.classList.remove('active');
+        this.mButtons.OR.classList.remove('active');
       break;
       case 1:
-        this.buttons.XOR.classList.remove('active');
+        this.mButtons.XOR.classList.remove('active');
       break;
       case 2:
-        this.buttons.AND.classList.remove('active');
+        this.mButtons.AND.classList.remove('active');
       break;
       case 3:
-        this.buttons.NAND.classList.remove('active');
+        this.mButtons.NAND.classList.remove('active');
       break;
+    }
+  }
+
+  private updateSparkline() {
+    let ctx = this.mReport.sparkline.getContext('2d')!;
+    ctx.clearRect(0, 0, 300, 50);
+
+    for (let i = 0; i < 50; i++) {
+      if(this.mErrorHistory[i] > this.mMaxError) {
+        this.mMaxError = this.mErrorHistory[i];
+      }
+    }
+
+    if(this.mMaxError != 0) {
+      ctx.fillStyle = '#f0f0f0';
+      ctx.beginPath();
+      ctx.moveTo(0, Math.abs(50 - 50 * this.mErrorHistory[0] / this.mMaxError));
+      for (let i = 0; i < 50; i++) {
+        ctx.lineTo((i + 1) * 300 / 50, Math.abs(50 - 50 * this.mErrorHistory[i] / this.mMaxError));
+      }
+      ctx.lineTo(300, 50);
+      ctx.lineTo(0, 50);
+      ctx.lineTo(0, Math.abs(50 - 50 * this.mErrorHistory[0] / this.mMaxError));
+      ctx.fill();
+
+      ctx.strokeStyle = '#e8302a';
+      ctx.beginPath();
+      ctx.moveTo(0, Math.abs(50 - 50 * this.mErrorHistory[0] / this.mMaxError));
+      for (let i = 0; i < 50; i++) {
+        ctx.lineTo((i + 1) * 300 / 50, Math.abs(50 - 50 * this.mErrorHistory[i] / this.mMaxError));
+      }
+      ctx.lineTo(325, Math.abs(50 - 50 * this.mErrorHistory[this.mErrorHistory.length-1] / this.mMaxError));
+      ctx.lineTo(325, 75);
+      ctx.lineTo(-25, 75);
+      ctx.lineTo(-25, Math.abs(50 - 50 * this.mErrorHistory[0] / this.mMaxError));
+      ctx.closePath();
+      ctx.stroke();
     }
   }
 

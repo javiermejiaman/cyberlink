@@ -375,7 +375,10 @@ class LinkStructure {
 
 }
 
-export class Network {
+/**
+ * neural network
+ */
+export class CyberLink {
 
   private mContext: CanvasRenderingContext2D;
   private mTopology: Topology;
@@ -383,7 +386,26 @@ export class Network {
   private mLinkStructure: LinkStructure;
   private mStyle: NetworkStyle;
 
-  constructor(context: CanvasRenderingContext2D, style: NetworkStyle, topology: Topology) {
+  // neural network
+  private mLearningRate: number;
+
+  private mTrainingSet: TrainingSet;
+  private mTrainingPointer = 0;
+
+  private mBuffer = 0;
+  private mError = 0;
+
+  private mEpoch = 1;
+
+  private mLReLUFactor = 0.01;
+
+  private mActivation = 0;
+
+  constructor(context: CanvasRenderingContext2D, style: NetworkStyle, topology: Topology, learningRate: number, trainingSet: TrainingSet) {
+
+    this.mLearningRate = learningRate;
+    this.mTrainingSet = trainingSet;
+
 
     this.mTopology = topology;
     this.mNeuronStructure = new NeuronStructure();
@@ -433,10 +455,8 @@ export class Network {
       }
     }
 
-  }
 
-  getContext() {
-    return this.mContext;
+
   }
 
   getTopology() {
@@ -463,41 +483,11 @@ export class Network {
     this.mLinkStructure = linkStructure;
   }
 
-}
 
-/**
- * neural network
- */
-export class CyberLink {
-
-  // neural network
-  private mNetwork: Network;
-  private mLearningRate: number;
-
-  private mTrainingSet: TrainingSet;
-  private mTrainingPointer = 0;
-
-  private mBuffer = 0;
-  private mError = 0;
-
-  private mEpoch = 1;
-
-  private mLReLUFactor = 0.01;
-
-  private mActivation = 0;
-
-  constructor(network: Network, learningRate: number, trainingSet: TrainingSet) {
-
-    this.mNetwork = network;
-    this.mLearningRate = learningRate;
-    this.mTrainingSet = trainingSet;
-
-  }
-  
   update() {
     this.forwardPropagation();
-    for (let i = 0; i < this.mNetwork.getNeuronStructure().getOutputLayer().getNeurons().length; i++) {
-      this.mBuffer += this.squaredError(this.mTrainingSet[this.mTrainingPointer].expected[i], this.mNetwork.getNeuronStructure().getOutputLayer().getNeurons()[i].getOutput());
+    for (let i = 0; i < this.mNeuronStructure.getOutputLayer().getNeurons().length; i++) {
+      this.mBuffer += this.absoluteError(this.mTrainingSet[this.mTrainingPointer].expected[i], this.mNeuronStructure.getOutputLayer().getNeurons()[i].getOutput());
     }
     this.backPropagation();
 
@@ -505,7 +495,7 @@ export class CyberLink {
 
     if(this.mTrainingPointer >= this.mTrainingSet.length) {
 
-      this.mError = this.mBuffer / this.mTrainingPointer;
+      this.mError = this.mBuffer / ( this.mTrainingSet.length * this.mNeuronStructure.getOutputLayer().getNeurons().length );
 
       this.mTrainingPointer = 0;
       this.mBuffer = 0;
@@ -518,17 +508,17 @@ export class CyberLink {
   draw() {
 
     // clear canvas
-    this.mNetwork.getContext().clearRect(0, 0, window.innerWidth, window.innerHeight);
+    this.mContext.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
     // draw links
-    this.mNetwork.getLinkStructure().getLinkLayers().forEach((linkLayer) => {
+    this.mLinkStructure.getLinkLayers().forEach((linkLayer) => {
       linkLayer.getLinks().forEach((link) => {
         link.update();
       });
     });
         
     // draw neurons
-    this.mNetwork.getNeuronStructure().getNeuronLayers().forEach((neuronLayer) => {
+    this.mNeuronStructure.getNeuronLayers().forEach((neuronLayer) => {
       neuronLayer.getNeurons().forEach((neuron) => {
         neuron.update();
       });
@@ -553,7 +543,7 @@ export class CyberLink {
     this.mTrainingPointer = 0;
     this.mBuffer = 0;
     this.mEpoch = 1;
-    this.mNetwork.getLinkStructure().resetWeights();
+    this.mLinkStructure.resetWeights();
   }
 
   setActivation(activation: number) {
@@ -561,15 +551,11 @@ export class CyberLink {
     this.mTrainingPointer = 0;
     this.mBuffer = 0;
     this.mEpoch = 1;
-    this.mNetwork.getLinkStructure().resetWeights();
+    this.mLinkStructure.resetWeights();
   }
 
   getTrainingPointer() {
     return this.mTrainingPointer;
-  }
-
-  getNetwork() {
-    return this.mNetwork;
   }
 
   private LReLU(value: number) {
@@ -588,6 +574,10 @@ export class CyberLink {
     return value * ( 1 - value );
   }
 
+  private absoluteError(target: number, actual: number) {
+    return Math.abs( target - actual );
+  }
+
   private squaredError(target: number, actual: number) {
     return 0.5 * ( ( target - actual ) * (target - actual ) );
   }
@@ -598,14 +588,14 @@ export class CyberLink {
 
   private forwardPropagation() {
 
-    for (let i = 0; i < this.mNetwork.getNeuronStructure().getNeuronLayers()[0].getNeurons().length; i++) {
-      this.mNetwork.getNeuronStructure().getInputLayer().getNeurons()[i].setOutput(this.mTrainingSet[this.mTrainingPointer].input[i]);
+    for (let i = 0; i < this.mNeuronStructure.getNeuronLayers()[0].getNeurons().length; i++) {
+      this.mNeuronStructure.getInputLayer().getNeurons()[i].setOutput(this.mTrainingSet[this.mTrainingPointer].input[i]);
     }
 
-    for (let i = 0; i < this.mNetwork.getNeuronStructure().getNeuronLayers().length - 1; i++) {
-      for (let j = 0; j < this.mNetwork.getNeuronStructure().getNeuronLayers()[i + 1].getNeurons().length; j++) {
-        let neuron = this.mNetwork.getNeuronStructure().getNeuronLayers()[i + 1].getNeurons()[j];
-        let links = this.mNetwork.getLinkStructure().rearLinks(neuron);
+    for (let i = 0; i < this.mNeuronStructure.getNeuronLayers().length - 1; i++) {
+      for (let j = 0; j < this.mNeuronStructure.getNeuronLayers()[i + 1].getNeurons().length; j++) {
+        let neuron = this.mNeuronStructure.getNeuronLayers()[i + 1].getNeurons()[j];
+        let links = this.mLinkStructure.rearLinks(neuron);
         let feed = 0;
 
         if(links != undefined) {
@@ -630,18 +620,18 @@ export class CyberLink {
 
   private backPropagation() {
 
-    let outputNeuronsLength = this.mNetwork.getNeuronStructure().getOutputLayer().getNeurons().length;
+    let outputNeuronsLength = this.mNeuronStructure.getOutputLayer().getNeurons().length;
     let outputError: number[] = new Array();
     for (let i = 0; i < outputNeuronsLength; i++) {
-      outputError[i] = this.squaredErrorPrime(this.mTrainingSet[this.mTrainingPointer].expected[i], this.mNetwork.getNeuronStructure().getOutputLayer().getNeurons()[i].getOutput());
+      outputError[i] = this.squaredErrorPrime(this.mTrainingSet[this.mTrainingPointer].expected[i], this.mNeuronStructure.getOutputLayer().getNeurons()[i].getOutput());
     }
 
-    for (let i = 0; i < this.mNetwork.getLinkStructure().getLinkLayers().length; i++) {
-      for (let j = 0; j < this.mNetwork.getLinkStructure().getLinkLayers()[i].getLinks().length; j++) {
+    for (let i = 0; i < this.mLinkStructure.getLinkLayers().length; i++) {
+      for (let j = 0; j < this.mLinkStructure.getLinkLayers()[i].getLinks().length; j++) {
 
         let sum = 0;
-        let link = this.mNetwork.getLinkStructure().getLinkLayers()[i].getLinks()[j];
-        let routes = this.mNetwork.getLinkStructure().routes(i, j);
+        let link = this.mLinkStructure.getLinkLayers()[i].getLinks()[j];
+        let routes = this.mLinkStructure.routes(i, j);
         
         let gradient = 0;
 
