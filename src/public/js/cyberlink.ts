@@ -1,26 +1,43 @@
 import { Point, Line, Circle, NetworkStyle } from './graphics.js';
 
+// the types on which a neuron can be differentiated
 enum NeuronType {
   INPUT,
   HIDDEN,
   OUTPUT
 }
 
+// topology of the network
 export interface Topology {
-  [index: number]: number;
+  [layer: number]: number;
   length: number;
 }
 
-interface TrainingData {
+/**
+ * Training entry
+ * 
+ * Input and expected arrays must be in alignment with input and output
+ * neurons respectively.
+ */
+interface TrainingEntry {
   input: number[];
   expected: number[];
 }
 
+// dataset on which the neural network will be trained
 export interface TrainingSet {
-  [index: number]: TrainingData;
+  [trainingEntry: number]: TrainingEntry;
   length: number;
 }
 
+/**
+ * Neurons of the neural network
+ * 
+ * Neurons are stateful graphical entities which holds an output value and
+ * are uniquely identifiable. Their state is accesible by getters and setters
+ * and can be differentiated into a specific type or be linked to other neurons.
+ * Linking will generate a Link object referencing both neurons.
+ */
 export class Neuron extends Circle {
 
   // neuron unique identifier
@@ -92,25 +109,38 @@ export class Neuron extends Circle {
 
   link(neuron: Neuron) {
 
+    // get indexes
     let originIndex = this.mIndex;
     let targetIndex = neuron.getIndex();
 
+    // get locations
     let originLocation = super.getLocation();
     let targetLocation = neuron.getLocation();
 
+    // validate variables
     if(originIndex != undefined && targetIndex != undefined && originLocation != undefined && targetLocation != undefined) {
+
+      // create link
       let link = new Link(super.getContext(), this.mStyle);
 
+      // link neurons depending on their determined position in the topology
       if(originIndex < targetIndex) {
         link.setLink([this, neuron]);
       } else {
         link.setLink([neuron, this]);
       }
 
+      // set the points upon which the link will be drawn
       link.setStart(originLocation);
       link.setEnd(targetLocation);
 
+      // return link
       return link;
+
+    } else {
+
+      // return false if the validation failed
+      return false;
 
     }
   }
@@ -121,6 +151,15 @@ export class Neuron extends Circle {
 
 }
 
+/**
+ * Links of the network
+ * 
+ * Links are the most important feature for visualization because their width and
+ * color reflects their current weight. Links internally handle a tuple of 2 neurons,
+ * the first neuron corresponds to the left most neuron topologically speaking and
+ * the last to the right most neuron. Methods getLeft() and getRight() ease the
+ * access to this information.
+ */
 class Link extends Line {
 
   // the indexes of the linked neurons
@@ -174,7 +213,6 @@ class Link extends Line {
     if(this.mLink != undefined) {
       return this.mLink[1];
     }
-
   }
 
   private calculateWidth(weight: number) {
@@ -195,6 +233,12 @@ class Link extends Line {
 
 }
 
+/**
+ * LAYERS
+ * 
+ * Layers holds an array of neurons or links, their main purpose is to keep neurons
+ * and links structured for their consumption in more complex logic.
+ */
 class NeuronLayer {
 
   private mNeurons: Neuron[] = new Array();
@@ -223,6 +267,14 @@ class LinkLayer {
 
 }
 
+/**
+ * STRUCTURES
+ * 
+ * Structures stack layers of neurons or links. Their main purpose is to ease the
+ * management of neurons and links but also offer utility methods that take advantage
+ * of these structures.
+ */
+
 class NeuronStructure {
 
   private mNeuronLayers: NeuronLayer[] = new Array();
@@ -243,16 +295,6 @@ class NeuronStructure {
     return this.getNeuronLayers()[this.getNeuronLayers().length - 1];
   }
 
-  findNeuron(index: number) {
-    for (let i = 0; i < this.mNeuronLayers.length; i++) {
-      for (let j = 0; j < this.mNeuronLayers[i].getNeurons().length; j++) {
-        if(this.mNeuronLayers[i].getNeurons()[j].getIndex() == index) {
-          return this.mNeuronLayers[i].getNeurons()[j];
-        }
-      }
-    }
-  }
-
 }
 
 class LinkStructure {
@@ -269,99 +311,185 @@ class LinkStructure {
 
   frontLinks(neuron: Neuron) {
 
-    let originIndex = neuron.getIndex();
+    // get index
+    let index = neuron.getIndex();
 
-    if(originIndex != undefined) {
+    // validate index
+    if(index != undefined) {
+
       let links: Link[] = new Array();
+
       for (let i = 0; i < this.mLinkLayers.length; i++) {
         for (let j = 0; j < this.mLinkLayers[i].getLinks().length; j++) {
+          // get the left neuron of the link
           let current = this.mLinkLayers[i].getLinks()[j].getLeft();
+          // validate current neuron
           if(current != undefined) {
+            // get index of the current neuron
             let currentIndex = current.getIndex();
+            // validate index of the current neuron
             if(currentIndex != undefined) {
-              if(currentIndex == originIndex) {
+              // compare indexes
+              if(currentIndex == index) {
+                // push link if indexes match
                 links.push( this.mLinkLayers[i].getLinks()[j] );
               }
             }
           }
         }
       }
-      return links;
+
+      // return links or false if there are not front links
+      if(links.length != 0) {
+        return links;
+      } else {
+        return false;
+      }
+
+    } else {
+      // return false if index validation failed
+      return false;
     }
   }
 
   rearLinks(neuron: Neuron) {
-    let originIndex = neuron.getIndex();
 
-    if(originIndex != undefined) {
+    // get index
+    let index = neuron.getIndex();
+
+    // validate index
+    if(index != undefined) {
+
       let links: Link[] = new Array();
+
       for (let i = 0; i < this.mLinkLayers.length; i++) {
         for (let j = 0; j < this.mLinkLayers[i].getLinks().length; j++) {
+          // get the right neuron of the link
           let current = this.mLinkLayers[i].getLinks()[j].getRight();
+          // validate current neuron
           if(current != undefined) {
+            // get index of the current neuron
             let currentIndex = current.getIndex();
+            // validate index of the current neuron
             if(currentIndex != undefined) {
-              if(currentIndex == originIndex) {
+              // compare indexes
+              if(currentIndex == index) {
+                // push link if indexes match
                 links.push( this.mLinkLayers[i].getLinks()[j] );
               }
             }
           }
         }
       }
-      return links;
+
+      // return links or false if there are not rear links
+      if(links.length != 0) {
+        return links;
+      } else {
+        return false;
+      }
+
+    } else {
+
+      // return false if the validation failed
+      return false;
+      
     }
   }
 
   routes(layer: number, position: number) {
-    let totalRoutes: number = 1;
-    let routes: Link[][] = new Array();
+
+    /**
+     * Tracks generation
+     * 
+     * Tracks array contains each link that is directly or indirectly connected to
+     * the root link. The root link is accessible through the parameters layer and
+     * position of this function and it is stored in the first layer of this array.
+     * The first dimension of tracks stores layers of links and the second dimension
+     * stores individual links within a layer.
+     */
     let tracks: Link[][] = new Array();
+
+    // initialize first track layer with the root link
     tracks[0] = new Array();
     tracks[0][0] = this.mLinkLayers[layer].getLinks()[position];
 
+    // get remaining track layers
     for (let i = layer + 1; i < this.mLinkLayers.length; i++) {
+      // initialize layer
       tracks[i - layer] = new Array();
       for (let j = 0; j < this.mLinkLayers[i].getLinks().length; j++) {
         for (let k = 0; k < tracks[i - layer - 1].length; k++) {
+          /**
+           * Get right neuron of the previous link and left neuron of the current
+           * link to validate that the current link is connected to the root link.
+           */
           let rightNeuron = tracks[i - layer - 1][k].getRight();
           let leftNeuron = this.mLinkLayers[i].getLinks()[j].getLeft();
+          // validate neurons
           if(rightNeuron != undefined && leftNeuron != undefined) {
+            // compare indexes
             if(rightNeuron.getIndex() == leftNeuron.getIndex()) {
+              // push link into the layer
               tracks[i - layer].push(this.mLinkLayers[i].getLinks()[j]);
             }
           }
         }
       }
     }
+
+    // routes are are all possible paths that can be generated by permuting the tracks
+    let routes: Link[][] = new Array();
+    let totalRoutes: number = 1;
     
+    // calculate total number of routes
     for (let i = 0; i < tracks.length; i++) {
       totalRoutes *= tracks[i].length;
     }
 
+    // initialize routes array
     for (let i = 0; i < totalRoutes; i++) {
       routes[i] = new Array();
     }
 
-    let cycleSize = 1;
+    /**
+     * Routes generation
+     * 
+     * To generate the routes, all paths are calculated pattern-wise by calculating the
+     * amount of times a given layer of tracks should be repeated along with repetition
+     * of the individual links of that layer.
+     */
+
+    // repetition trackers
+    let linkRepetition = 1;
+    let layerRepetition: number;
+
     for (let i = tracks.length - 1; i >= 0 ; i--) {
 
-      let factor = totalRoutes / ( cycleSize * tracks[i].length );
+      // calculate layer repetition
+      layerRepetition  = totalRoutes / ( linkRepetition * tracks[i].length );
 
       let counter = 0;
-      for (let j = 0; j < factor; j++) {
+      for (let j = 0; j < layerRepetition; j++) {
         for (let k = 0; k < tracks[i].length; k++) {
-          for (let l = 0; l < cycleSize; l++) {
+          for (let l = 0; l < linkRepetition; l++) {
             routes[counter][tracks.length - i - 1] = tracks[i][k];
             counter++;
           }
         }
       }
 
-      cycleSize *= tracks[i].length;
+      // update link repetition
+      linkRepetition *= tracks[i].length;
 
     }
     
-    return routes;
+    // return routes or false if there are not routes
+    if(routes.length != 0) {
+      return routes;
+    } else {
+      return false;
+    }
 
   }
 
@@ -376,8 +504,9 @@ class LinkStructure {
 }
 
 /**
- * neural network
+ * MAIN LOGIC
  */
+
 export class CyberLink {
 
   private mContext: CanvasRenderingContext2D;
@@ -399,7 +528,7 @@ export class CyberLink {
 
   private mLReLUFactor = 0.01;
 
-  private mActivation = 0;
+  private mActivationFunction = 0;
 
   constructor(context: CanvasRenderingContext2D, style: NetworkStyle, topology: Topology, learningRate: number, trainingSet: TrainingSet) {
 
@@ -447,7 +576,7 @@ export class CyberLink {
       for( let j = 0; j < this.mNeuronStructure.getNeuronLayers()[i - 1].getNeurons().length; j++ ) {
         for( let k = 0; k < this.mNeuronStructure.getNeuronLayers()[i].getNeurons().length; k++ ) {
           let link = this.mNeuronStructure.getNeuronLayers()[i - 1].getNeurons()[j].link( this.mNeuronStructure.getNeuronLayers()[i].getNeurons()[k] );
-          if(link != undefined) {
+          if(link != false) {
             this.mLinkStructure.getLinkLayers()[i - 1].getLinks().push( link );
           }
         }
@@ -483,8 +612,8 @@ export class CyberLink {
     this.mLinkStructure.resetWeights();
   }
 
-  setActivation(activation: number) {
-    this.mActivation = activation;
+  setActivation(activationFunction: number) {
+    this.mActivationFunction = activationFunction;
     this.mTrainingPointer = 0;
     this.mBuffer = 0;
     this.mEpoch = 1;
@@ -569,7 +698,7 @@ export class CyberLink {
         let links = this.mLinkStructure.rearLinks(neuron);
         let feed = 0;
 
-        if(links != undefined) {
+        if(links != false) {
           for (let k = 0; k < links.length; k++) {
             let rearNeuron = links[k].getLeft();
             if(rearNeuron != undefined) {
@@ -577,7 +706,7 @@ export class CyberLink {
             }
           }
         }
-        switch(this.mActivation) {
+        switch(this.mActivationFunction) {
           case 0:
             neuron.setOutput(this.sigmoid(feed + neuron.getBias()));
           break;
@@ -606,38 +735,40 @@ export class CyberLink {
         
         let gradient = 0;
 
-        for (let k = 0; k < routes.length; k++) {
-          for (let l = 0; l < routes[k].length; l++) {
+        if(routes != false) {
+          for (let k = 0; k < routes.length; k++) {
+            for (let l = 0; l < routes[k].length; l++) {
 
-            if(l == 0) {
-              sum = outputError[k % outputNeuronsLength];
-            }
+              if(l == 0) {
+                sum = outputError[k % outputNeuronsLength];
+              }
 
-            let neuronRight = routes[k][l].getRight();
-            let neuronLeft = routes[k][l].getLeft();
-            if(neuronRight != undefined && neuronLeft != undefined) {
-              if(l == routes[k].length - 1) {
-                switch(this.mActivation) {
-                  case 0:
-                    sum *= this.sigmoidPrime(neuronRight.getOutput()) * neuronLeft.getOutput();
-                  break;
-                  case 1:
-                    sum *= this.LReLUPrime(neuronRight.getOutput()) * neuronLeft.getOutput();
-                  break;
-                }
-              } else {
-                switch(this.mActivation) {
-                  case 0:
-                    sum *= this.sigmoidPrime(neuronRight.getOutput()) * routes[k][l].getWeight();
-                  break;
-                  case 1:
-                    sum *= this.LReLUPrime(neuronRight.getOutput()) * routes[k][l].getWeight();
-                  break;
+              let neuronRight = routes[k][l].getRight();
+              let neuronLeft = routes[k][l].getLeft();
+              if(neuronRight != undefined && neuronLeft != undefined) {
+                if(l == routes[k].length - 1) {
+                  switch(this.mActivationFunction) {
+                    case 0:
+                      sum *= this.sigmoidPrime(neuronRight.getOutput()) * neuronLeft.getOutput();
+                    break;
+                    case 1:
+                      sum *= this.LReLUPrime(neuronRight.getOutput()) * neuronLeft.getOutput();
+                    break;
+                  }
+                } else {
+                  switch(this.mActivationFunction) {
+                    case 0:
+                      sum *= this.sigmoidPrime(neuronRight.getOutput()) * routes[k][l].getWeight();
+                    break;
+                    case 1:
+                      sum *= this.LReLUPrime(neuronRight.getOutput()) * routes[k][l].getWeight();
+                    break;
+                  }
                 }
               }
             }
+            gradient += sum;
           }
-          gradient += sum;
         }
 
         link.setWeight( link.getWeight() - ( this.mLearningRate * gradient ) );

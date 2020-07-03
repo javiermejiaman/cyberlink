@@ -518,6 +518,9 @@ class App {
       // update tracing table with last execution data
       this.updateTracingTable(outputNeurons, trainingPointer);
 
+      // update average error
+      this.mReport.error.innerHTML = this.mCyberLink.getError().toFixed(5);
+
       if(currentEpoch % 10 == 0) {
 
         // update error history
@@ -526,9 +529,6 @@ class App {
 
         // update sparkline with the changes
         this.updateSparkline();
-
-        // update average error
-        this.mReport.error.innerHTML = this.mCyberLink.getError().toFixed(5);
 
         // update epoch
         this.mReport.epoch.innerHTML = currentEpoch.toString();
