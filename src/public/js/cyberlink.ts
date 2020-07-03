@@ -21,7 +21,7 @@ export interface TrainingSet {
   length: number;
 }
 
-class Neuron extends Circle {
+export class Neuron extends Circle {
 
   // neuron unique identifier
   private mIndex: number | undefined;
@@ -381,12 +381,12 @@ class LinkStructure {
 export class CyberLink {
 
   private mContext: CanvasRenderingContext2D;
+
   private mTopology: Topology;
+
   private mNeuronStructure: NeuronStructure;
   private mLinkStructure: LinkStructure;
-  private mStyle: NetworkStyle;
 
-  // neural network
   private mLearningRate: number;
 
   private mTrainingSet: TrainingSet;
@@ -411,7 +411,6 @@ export class CyberLink {
     this.mNeuronStructure = new NeuronStructure();
     this.mLinkStructure = new LinkStructure();
     this.mContext = context;
-    this.mStyle = style;
     
     for( let i = 0; i < this.mTopology.length; i++ ) {
       this.mNeuronStructure.getNeuronLayers()[i] = new NeuronLayer();
@@ -454,35 +453,43 @@ export class CyberLink {
         }
       }
     }
-
-
-
   }
 
-  getTopology() {
-    return this.mTopology;
+  getError() {
+    return this.mError;
   }
 
-  private setTopology(topology: Topology) {
-    this.mTopology = topology;
+  getEpoch() {
+    return this.mEpoch;
+  }
+
+  getTrainingPointer() {
+    return this.mTrainingPointer;
   }
 
   getNeuronStructure() {
     return this.mNeuronStructure;
-  }
-  
-  private setNeuronStructure(neuronStructure: NeuronStructure) {
-    this.mNeuronStructure = neuronStructure;
   }
 
   getLinkStructure() {
     return this.mLinkStructure;
   }
 
-  private setLinkLayers(linkStructure: LinkStructure) {
-    this.mLinkStructure = linkStructure;
+  setTrainingSet(trainingSet: TrainingSet) {
+    this.mTrainingSet = trainingSet;
+    this.mTrainingPointer = 0;
+    this.mBuffer = 0;
+    this.mEpoch = 1;
+    this.mLinkStructure.resetWeights();
   }
 
+  setActivation(activation: number) {
+    this.mActivation = activation;
+    this.mTrainingPointer = 0;
+    this.mBuffer = 0;
+    this.mEpoch = 1;
+    this.mLinkStructure.resetWeights();
+  }
 
   update() {
     this.forwardPropagation();
@@ -526,38 +533,6 @@ export class CyberLink {
 
   }
 
-  getEpoch() {
-    return this.mEpoch;
-  }
-
-  getError() {
-    return this.mError;
-  }
-
-  getTrainingSet() {
-    return this.mTrainingSet;
-  }
-
-  setTrainingSet(trainingSet: TrainingSet) {
-    this.mTrainingSet = trainingSet;
-    this.mTrainingPointer = 0;
-    this.mBuffer = 0;
-    this.mEpoch = 1;
-    this.mLinkStructure.resetWeights();
-  }
-
-  setActivation(activation: number) {
-    this.mActivation = activation;
-    this.mTrainingPointer = 0;
-    this.mBuffer = 0;
-    this.mEpoch = 1;
-    this.mLinkStructure.resetWeights();
-  }
-
-  getTrainingPointer() {
-    return this.mTrainingPointer;
-  }
-
   private LReLU(value: number) {
     return value > 0 ? value : ( value * this.mLReLUFactor );
   }
@@ -576,10 +551,6 @@ export class CyberLink {
 
   private absoluteError(target: number, actual: number) {
     return Math.abs( target - actual );
-  }
-
-  private squaredError(target: number, actual: number) {
-    return 0.5 * ( ( target - actual ) * (target - actual ) );
   }
 
   private squaredErrorPrime(target: number, actual: number) {
