@@ -295,6 +295,14 @@ class NeuronStructure {
     return this.getNeuronLayers()[this.getNeuronLayers().length - 1];
   }
 
+  resetBiases() {
+    for (let i = 0; i < this.mNeuronLayers.length; i++) {
+      for (let j = 0; j < this.mNeuronLayers[i].getNeurons().length; j++) {
+        this.mNeuronLayers[i].getNeurons()[j].setBias(Math.random());
+      }
+    }
+  }
+
 }
 
 class LinkStructure {
@@ -537,6 +545,13 @@ export class CyberLink {
   // current activation function
   private mActivationFunction = 0;
 
+  // used to schedule a change in training set or activation function
+  private mReset = false;
+
+  // when a change is scheduled exchange data is stored in these variables
+  private mExchangeTrainingSet: TrainingSet;
+  private mExchangeActivationFunction: number;
+
   constructor(context: CanvasRenderingContext2D, style: NetworkStyle, topology: Topology, learningRate: number, trainingSet: TrainingSet) {
 
     // initialize variables
@@ -546,6 +561,10 @@ export class CyberLink {
     this.mNeuronStructure = new NeuronStructure();
     this.mLinkStructure = new LinkStructure();
     this.mTrainingSet = trainingSet;
+
+    // point exchange to the working variables
+    this.mExchangeTrainingSet = this.mTrainingSet;
+    this.mExchangeActivationFunction = this.mActivationFunction;
 
     // convert topology into a neurons structure
     for( let i = 0; i < this.mTopology.length; i++ ) {
@@ -615,19 +634,13 @@ export class CyberLink {
   }
 
   setTrainingSet(trainingSet: TrainingSet) {
-    this.mTrainingSet = trainingSet;
-    this.mTrainingPointer = 0;
-    this.mErrorSum = 0;
-    this.mEpoch = 1;
-    this.mLinkStructure.resetWeights();
+    this.mExchangeTrainingSet = trainingSet;
+    this.mReset = true;
   }
 
   setActivation(activationFunction: number) {
-    this.mActivationFunction = activationFunction;
-    this.mTrainingPointer = 0;
-    this.mErrorSum = 0;
-    this.mEpoch = 1;
-    this.mLinkStructure.resetWeights();
+    this.mExchangeActivationFunction = activationFunction;
+    this.mReset = true;
   }
 
   draw() {
@@ -653,32 +666,51 @@ export class CyberLink {
 
   update() {
 
-    // propagate inputs throughout the network
-    this.forwardPropagation();
+    // execute normally if there are no reset scheduled
+    if(this.mReset == false) {
 
-    // calculate and sum the error of every output neuron respect to the expected value
-    for (let i = 0; i < this.mNeuronStructure.getOutputLayer().getNeurons().length; i++) {
-      this.mErrorSum += this.absoluteError(this.mTrainingSet[this.mTrainingPointer].expected[i], this.mNeuronStructure.getOutputLayer().getNeurons()[i].getOutput());
-    }
+      // propagate inputs throughout the network
+      this.forwardPropagation();
 
-    // adjust the weights using gradient descent
-    this.backPropagation();
+      // calculate and sum the error of every output neuron respect to the expected value
+      for (let i = 0; i < this.mNeuronStructure.getOutputLayer().getNeurons().length; i++) {
+        this.mErrorSum += this.absoluteError(this.mTrainingSet[this.mTrainingPointer].expected[i], this.mNeuronStructure.getOutputLayer().getNeurons()[i].getOutput());
+      }
 
-    // increase training pointer
-    this.mTrainingPointer++;
+      // adjust the weights using gradient descent
+      this.backPropagation();
 
-    // restart the cycle when all training inputs have been processed
-    if(this.mTrainingPointer >= this.mTrainingSet.length) {
+      // increase training pointer
+      this.mTrainingPointer++;
 
-      // calculate error for the epoch
-      this.mError = this.mErrorSum / ( this.mTrainingSet.length * this.mNeuronStructure.getOutputLayer().getNeurons().length );
+      // restart the cycle when all training inputs have been processed
+      if(this.mTrainingPointer >= this.mTrainingSet.length) {
 
-      // reset values
+        // calculate error for the epoch
+        this.mError = this.mErrorSum / ( this.mTrainingSet.length * this.mNeuronStructure.getOutputLayer().getNeurons().length );
+
+        // reset values
+        this.mTrainingPointer = 0;
+        this.mErrorSum = 0;
+
+        // increase epoch
+        this.mEpoch++;
+
+      }
+    
+    } else {
+
+      // update working variables with exchange data
+      this.mTrainingSet = this.mExchangeTrainingSet;
+      this.mActivationFunction = this.mExchangeActivationFunction;
+
+      // reset the neural network
+      this.mNeuronStructure.resetBiases();
+      this.mLinkStructure.resetWeights();
       this.mTrainingPointer = 0;
       this.mErrorSum = 0;
-
-      // increase epoch
-      this.mEpoch++;
+      this.mEpoch = 1;
+      this.mReset = false;
 
     }
 

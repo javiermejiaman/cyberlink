@@ -68,7 +68,7 @@ let networkStyle: NetworkStyle = {
  * stuck in a local minima, high rates in the other hand, may lead to convergence
  * problems.
  */
-const learningRate = 0.5
+const learningRate = 0.5;
 
 /**
  * Training sets
