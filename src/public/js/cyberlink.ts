@@ -509,38 +509,45 @@ class LinkStructure {
 
 export class CyberLink {
 
+  // context
   private mContext: CanvasRenderingContext2D;
 
+  // network topology
   private mTopology: Topology;
 
+  // hyperparameters
+  private mLReLUFactor = 0.01;
+  private mLearningRate: number;
+
+  // network structure
   private mNeuronStructure: NeuronStructure;
   private mLinkStructure: LinkStructure;
 
-  private mLearningRate: number;
-
+  // training
   private mTrainingSet: TrainingSet;
   private mTrainingPointer = 0;
 
-  private mBuffer = 0;
+  // error tracking
+  private mErrorSum = 0;
   private mError = 0;
 
+  // epoch tracking
   private mEpoch = 1;
 
-  private mLReLUFactor = 0.01;
-
+  // current activation function
   private mActivationFunction = 0;
 
   constructor(context: CanvasRenderingContext2D, style: NetworkStyle, topology: Topology, learningRate: number, trainingSet: TrainingSet) {
 
-    this.mLearningRate = learningRate;
-    this.mTrainingSet = trainingSet;
-
-
+    // initialize variables
+    this.mContext = context;
     this.mTopology = topology;
+    this.mLearningRate = learningRate;
     this.mNeuronStructure = new NeuronStructure();
     this.mLinkStructure = new LinkStructure();
-    this.mContext = context;
-    
+    this.mTrainingSet = trainingSet;
+
+    // convert topology into a neurons structure
     for( let i = 0; i < this.mTopology.length; i++ ) {
       this.mNeuronStructure.getNeuronLayers()[i] = new NeuronLayer();
       for( let j = 0; j < this.mTopology[i]; j++ ) {
@@ -548,6 +555,7 @@ export class CyberLink {
       }
     }
 
+    // identify, localize and differentiate neurons
     let index = 0;
     for( let i = 0; i < this.mNeuronStructure.getNeuronLayers().length; i++ ) {
       if( i == 0 ) {
@@ -571,6 +579,7 @@ export class CyberLink {
       }
     }
 
+    // link neurons
     for( let i = 1; i < this.mNeuronStructure.getNeuronLayers().length; i++ ) {
       this.mLinkStructure.getLinkLayers().push( new LinkLayer() );
       for( let j = 0; j < this.mNeuronStructure.getNeuronLayers()[i - 1].getNeurons().length; j++ ) {
@@ -582,18 +591,7 @@ export class CyberLink {
         }
       }
     }
-  }
 
-  getError() {
-    return this.mError;
-  }
-
-  getEpoch() {
-    return this.mEpoch;
-  }
-
-  getTrainingPointer() {
-    return this.mTrainingPointer;
   }
 
   getNeuronStructure() {
@@ -604,10 +602,22 @@ export class CyberLink {
     return this.mLinkStructure;
   }
 
+  getTrainingPointer() {
+    return this.mTrainingPointer;
+  }
+
+  getError() {
+    return this.mError;
+  }
+
+  getEpoch() {
+    return this.mEpoch;
+  }
+
   setTrainingSet(trainingSet: TrainingSet) {
     this.mTrainingSet = trainingSet;
     this.mTrainingPointer = 0;
-    this.mBuffer = 0;
+    this.mErrorSum = 0;
     this.mEpoch = 1;
     this.mLinkStructure.resetWeights();
   }
@@ -615,30 +625,9 @@ export class CyberLink {
   setActivation(activationFunction: number) {
     this.mActivationFunction = activationFunction;
     this.mTrainingPointer = 0;
-    this.mBuffer = 0;
+    this.mErrorSum = 0;
     this.mEpoch = 1;
     this.mLinkStructure.resetWeights();
-  }
-
-  update() {
-    this.forwardPropagation();
-    for (let i = 0; i < this.mNeuronStructure.getOutputLayer().getNeurons().length; i++) {
-      this.mBuffer += this.absoluteError(this.mTrainingSet[this.mTrainingPointer].expected[i], this.mNeuronStructure.getOutputLayer().getNeurons()[i].getOutput());
-    }
-    this.backPropagation();
-
-    this.mTrainingPointer++;
-
-    if(this.mTrainingPointer >= this.mTrainingSet.length) {
-
-      this.mError = this.mBuffer / ( this.mTrainingSet.length * this.mNeuronStructure.getOutputLayer().getNeurons().length );
-
-      this.mTrainingPointer = 0;
-      this.mBuffer = 0;
-      this.mEpoch++;
-
-    }
-
   }
 
   draw() {
@@ -659,6 +648,39 @@ export class CyberLink {
         neuron.update();
       });
     });
+
+  }
+
+  update() {
+
+    // propagate inputs throughout the network
+    this.forwardPropagation();
+
+    // calculate and sum the error of every output neuron respect to the expected value
+    for (let i = 0; i < this.mNeuronStructure.getOutputLayer().getNeurons().length; i++) {
+      this.mErrorSum += this.absoluteError(this.mTrainingSet[this.mTrainingPointer].expected[i], this.mNeuronStructure.getOutputLayer().getNeurons()[i].getOutput());
+    }
+
+    // adjust the weights using gradient descent
+    this.backPropagation();
+
+    // increase training pointer
+    this.mTrainingPointer++;
+
+    // restart the cycle when all training inputs have been processed
+    if(this.mTrainingPointer >= this.mTrainingSet.length) {
+
+      // calculate error for the epoch
+      this.mError = this.mErrorSum / ( this.mTrainingSet.length * this.mNeuronStructure.getOutputLayer().getNeurons().length );
+
+      // reset values
+      this.mTrainingPointer = 0;
+      this.mErrorSum = 0;
+
+      // increase epoch
+      this.mEpoch++;
+
+    }
 
   }
 
@@ -688,90 +710,121 @@ export class CyberLink {
 
   private forwardPropagation() {
 
+    // initialize input layer neurons
     for (let i = 0; i < this.mNeuronStructure.getNeuronLayers()[0].getNeurons().length; i++) {
       this.mNeuronStructure.getInputLayer().getNeurons()[i].setOutput(this.mTrainingSet[this.mTrainingPointer].input[i]);
     }
 
     for (let i = 0; i < this.mNeuronStructure.getNeuronLayers().length - 1; i++) {
       for (let j = 0; j < this.mNeuronStructure.getNeuronLayers()[i + 1].getNeurons().length; j++) {
-        let neuron = this.mNeuronStructure.getNeuronLayers()[i + 1].getNeurons()[j];
-        let links = this.mLinkStructure.rearLinks(neuron);
-        let feed = 0;
 
-        if(links != false) {
-          for (let k = 0; k < links.length; k++) {
-            let rearNeuron = links[k].getLeft();
+        /**
+         * network feed are all the inputs a neuron receives. It's composed by the sum of
+         * the each rear link times the output of the other neuron they are connected to.
+         */
+        let networkFeed = 0;
+        
+        // current neuron and its rear links
+        let currentNeuron = this.mNeuronStructure.getNeuronLayers()[i + 1].getNeurons()[j];
+        let rearLinks = this.mLinkStructure.rearLinks(currentNeuron);
+
+        // calculate network feed
+        if(rearLinks != false) {
+          for (let k = 0; k < rearLinks.length; k++) {
+            let rearNeuron = rearLinks[k].getLeft();
             if(rearNeuron != undefined) {
-              feed += links[k].getWeight() * rearNeuron.getOutput();
+              networkFeed += rearLinks[k].getWeight() * rearNeuron.getOutput();
             }
           }
         }
+
+        // activate neuron depending on the current activation function
         switch(this.mActivationFunction) {
           case 0:
-            neuron.setOutput(this.sigmoid(feed + neuron.getBias()));
+            currentNeuron.setOutput(this.sigmoid(networkFeed + currentNeuron.getBias()));
           break;
           case 1:
-            neuron.setOutput(this.LReLU(feed + neuron.getBias()));
+            currentNeuron.setOutput(this.LReLU(networkFeed + currentNeuron.getBias()));
           break;
         }
+
       }
     }
   }
 
   private backPropagation() {
 
-    let outputNeuronsLength = this.mNeuronStructure.getOutputLayer().getNeurons().length;
+    // output error of each output neuron
     let outputError: number[] = new Array();
-    for (let i = 0; i < outputNeuronsLength; i++) {
+
+    // calculate output error
+    for (let i = 0; i < this.mNeuronStructure.getOutputLayer().getNeurons().length; i++) {
       outputError[i] = this.squaredErrorPrime(this.mTrainingSet[this.mTrainingPointer].expected[i], this.mNeuronStructure.getOutputLayer().getNeurons()[i].getOutput());
     }
 
     for (let i = 0; i < this.mLinkStructure.getLinkLayers().length; i++) {
       for (let j = 0; j < this.mLinkStructure.getLinkLayers()[i].getLinks().length; j++) {
 
-        let sum = 0;
-        let link = this.mLinkStructure.getLinkLayers()[i].getLinks()[j];
+        /**
+         * Gradient descent
+         * 
+         * The weight of the target link will be updated using gradient descent. In order
+         * to do this, the partial derivative of every route will be calculated using the
+         * chain rule. The sum of these derivatives will be the gradient of that specific
+         * link. The gradient will be modulated using the learning rate before proceeding
+         * with the weight update.
+         */
+        let targetLink = this.mLinkStructure.getLinkLayers()[i].getLinks()[j];
         let routes = this.mLinkStructure.routes(i, j);
-        
+
+        let partial = 0;
         let gradient = 0;
 
         if(routes != false) {
           for (let k = 0; k < routes.length; k++) {
             for (let l = 0; l < routes[k].length; l++) {
 
+              // set partial to the output error of the output neuron of the current route
               if(l == 0) {
-                sum = outputError[k % outputNeuronsLength];
+                partial = outputError[k % this.mNeuronStructure.getOutputLayer().getNeurons().length];
               }
 
+              // right and left neuron of the current route link
               let neuronRight = routes[k][l].getRight();
               let neuronLeft = routes[k][l].getLeft();
+
+              // apply chain rule
               if(neuronRight != undefined && neuronLeft != undefined) {
                 if(l == routes[k].length - 1) {
                   switch(this.mActivationFunction) {
                     case 0:
-                      sum *= this.sigmoidPrime(neuronRight.getOutput()) * neuronLeft.getOutput();
+                      partial *= this.sigmoidPrime(neuronRight.getOutput()) * neuronLeft.getOutput();
                     break;
                     case 1:
-                      sum *= this.LReLUPrime(neuronRight.getOutput()) * neuronLeft.getOutput();
+                      partial *= this.LReLUPrime(neuronRight.getOutput()) * neuronLeft.getOutput();
                     break;
                   }
                 } else {
                   switch(this.mActivationFunction) {
                     case 0:
-                      sum *= this.sigmoidPrime(neuronRight.getOutput()) * routes[k][l].getWeight();
+                      partial *= this.sigmoidPrime(neuronRight.getOutput()) * routes[k][l].getWeight();
                     break;
                     case 1:
-                      sum *= this.LReLUPrime(neuronRight.getOutput()) * routes[k][l].getWeight();
+                      partial *= this.LReLUPrime(neuronRight.getOutput()) * routes[k][l].getWeight();
                     break;
                   }
                 }
               }
             }
-            gradient += sum;
+
+            // add chain to the gradient
+            gradient += partial;
+
           }
         }
 
-        link.setWeight( link.getWeight() - ( this.mLearningRate * gradient ) );
+        // update weight using gradient descent
+        targetLink.setWeight( targetLink.getWeight() - ( this.mLearningRate * gradient ) );
 
       }
     }
